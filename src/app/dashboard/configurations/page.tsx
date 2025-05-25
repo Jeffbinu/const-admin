@@ -18,7 +18,7 @@ import {
   LineItemFormData,
   EstimationTemplateFormData
 } from '@/lib/types';
-import { Plus, Edit, Trash2, FileText, Eye, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, Eye } from 'lucide-react';
 import LineItemForm from '@/components/forms/LineItemForm';
 import EstimationTemplateForm from '@/components/forms/EstimationTemplateForm';
 import { useAgreements } from '@/hooks/useAggrements';

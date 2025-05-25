@@ -470,6 +470,10 @@ export const dataManager = {
     return null;
   },
 
+  async getAllProjects(): Promise<Project[]> {
+    return [...mockProjects];
+  },
+
   // Projects
   async getProjects(): Promise<Project[]> {
     return [...mockProjects];
