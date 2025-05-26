@@ -55,6 +55,8 @@ export const mockProjects: Project[] = [
         description: "Foundation and basement construction",
       },
     ],
+    projectAddress: "",
+    phoneNumber: ""
   },
   {
     id: "PRJ002",
@@ -76,6 +78,8 @@ export const mockProjects: Project[] = [
         status: "completed",
       },
     ],
+    projectAddress: "",
+    phoneNumber: ""
   },
   {
     id: "PRJ003",
@@ -109,6 +113,8 @@ export const mockProjects: Project[] = [
         status: "completed",
       },
     ],
+    projectAddress: "",
+    phoneNumber: ""
   },
   {
     id: "PRJ004",
@@ -130,6 +136,8 @@ export const mockProjects: Project[] = [
         status: "completed",
       },
     ],
+    projectAddress: "",
+    phoneNumber: ""
   },
 ];
 
