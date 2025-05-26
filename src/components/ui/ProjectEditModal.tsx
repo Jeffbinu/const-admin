@@ -75,6 +75,8 @@ export default function ProjectEditModal({
     projectDuration: project.projectDuration,
     estimatedBudget: project.estimatedBudget,
     status: project.status,
+    projectAddress: project.projectAddress || '', // Add default if missing
+    phoneNumber: project.phoneNumber || '',       // Add default if missing
   });
 
   const currentEstimation = estimations.find(est => est.isActive);
