@@ -23,6 +23,7 @@ export interface TableColumn<T> {
   filterable?: boolean;
   render?: (value: any, row: T) => React.ReactNode;
   width?: string;
+  align?: 'left' | 'center' | 'right'; // Added align option
 }
 
 export interface TableProps<T> {
@@ -38,6 +39,7 @@ export interface TableProps<T> {
   loading?: boolean;
   emptyMessage?: string;
   className?: string;
+  defaultAlign?: 'left' | 'center' | 'right'; // Added default alignment option
 }
 
 interface SortConfig {
@@ -62,6 +64,7 @@ function DataTable<T extends Record<string, any>>({
   loading = false,
   emptyMessage = "No data available",
   className,
+  defaultAlign = 'left', // Default to center alignment
 }: TableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
@@ -168,6 +171,8 @@ function DataTable<T extends Record<string, any>>({
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
+
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -177,178 +182,188 @@ function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Search and Controls */}
+    <div className={cn("flex flex-col h-full", className)}>
+      {/* Search and Controls - Fixed at top */}
       {(searchable || filterable) && (
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          {searchable && (
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          )}
+        <div className="flex-shrink-0 mb-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between">
+            {searchable && (
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.id as string}
-                  className={cn(
-                    "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider",
-                    column.sortable && sortable && "cursor-pointer select-none hover:bg-gray-100",
-                    column.width && `w-${column.width}`
-                  )}
-                  onClick={() => column.sortable && handleSort(column.id as string)}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>{column.header}</span>
-                    {column.sortable && sortable && (
-                      <div className="flex flex-col">
-                        <ChevronUp 
-                          className={cn(
-                            "h-3 w-3",
-                            sortConfig?.key === column.id && sortConfig.direction === 'asc'
-                              ? "text-blue-600"
-                              : "text-gray-400"
-                          )}
-                        />
-                        <ChevronDown 
-                          className={cn(
-                            "h-3 w-3 -mt-1",
-                            sortConfig?.key === column.id && sortConfig.direction === 'desc'
-                              ? "text-blue-600"
-                              : "text-gray-400"
-                          )}
+      {/* Table Container - Scrollable */}
+      <div className="flex-1 overflow-y-scroll border border-gray-200 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column.id as string}
+                    className={cn(
+                      "px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50  text-left",
+                      
+                      column.sortable && sortable && "cursor-pointer select-none hover:bg-gray-100",
+                      column.width && `w-${column.width}`
+                    )}
+                    onClick={() => column.sortable && handleSort(column.id as string)}
+                  >
+                    <div className="text-left flex items-center justify-between">
+                      <span>{column.header}</span>
+                      {column.sortable && sortable && (
+                        <div className="flex flex-col">
+                          <ChevronUp 
+                            className={cn(
+                              "h-3 w-3",
+                              sortConfig?.key === column.id && sortConfig.direction === 'asc'
+                                ? "text-blue-600"
+                                : "text-gray-400"
+                            )}
+                          />
+                          <ChevronDown 
+                            className={cn(
+                              "h-3 w-3 -mt-1",
+                              sortConfig?.key === column.id && sortConfig.direction === 'desc'
+                                ? "text-blue-600"
+                                : "text-gray-400"
+                            )}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {/* Column Filter */}
+                    {column.filterable && filterable && (
+                      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                        <Input
+                          placeholder={`Filter ${column.header.toLowerCase()}...`}
+                          value={filters[column.id as string] || ''}
+                          onChange={(e) => handleFilterChange(column.id as string, e.target.value)}
+                          className="text-xs h-8"
                         />
                       </div>
                     )}
-                  </div>
-                  {/* Column Filter */}
-                  {column.filterable && filterable && (
-                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                      <Input
-                        placeholder={`Filter ${column.header.toLowerCase()}...`}
-                        value={filters[column.id as string] || ''}
-                        onChange={(e) => handleFilterChange(column.id as string, e.target.value)}
-                        className="text-xs h-8"
-                      />
-                    </div>
-                  )}
-                </th>
-              ))}
-              {actions && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td 
-                  colSpan={columns.length + (actions ? 1 : 0)} 
-                  className="px-6 py-12 text-center text-gray-500"
-                >
-                  {emptyMessage}
-                </td>
+                  </th>
+                ))}
+                {actions && (
+                  <th className=" py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                    Actions
+                  </th>
+                )}
               </tr>
-            ) : (
-              paginatedData.map((row, index) => (
-                <tr
-                  key={index}
-                  className={cn(
-                    "hover:bg-gray-50",
-                    onRowClick && "cursor-pointer"
-                  )}
-                  onClick={() => onRowClick?.(row)}
-                >
-                  {columns.map((column) => {
-                    const value = getValue(row, column.accessor);
-                    return (
-                      <td key={column.id as string} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {column.render ? column.render(value, row) : value}
-                      </td>
-                    );
-                  })}
-                  {actions && (
-                    <td className=" py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        {actions(row)}
-                      </div>
-                    </td>
-                  )}
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {paginatedData.length === 0 ? (
+                <tr>
+                  <td 
+                    colSpan={columns.length + (actions ? 1 : 0)} 
+                    className="px-6 py-12 text-center text-gray-500"
+                  >
+                    {emptyMessage}
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                paginatedData.map((row, index) => (
+                  <tr
+                    key={index}
+                    className={cn(
+                      "hover:bg-gray-50",
+                      onRowClick && "cursor-pointer"
+                    )}
+                    onClick={() => onRowClick?.(row)}
+                  >
+                    {columns.map((column) => {
+                      const value = getValue(row, column.accessor);
+                      return (
+                        <td 
+                          key={column.id as string} 
+                          className={cn(
+                            "px-6 py-4 whitespace-nowrap text-sm text-gray-900",
+                          )}
+                        >
+                          {column.render ? column.render(value, row) : value}
+                        </td>
+                      );
+                    })}
+                    {actions && (
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          {actions(row)}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination - Fixed at bottom */}
       {pagination && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length} results
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            
-            {/* Page Numbers */}
-            <div className="flex space-x-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let page;
-                if (totalPages <= 5) {
-                  page = i + 1;
-                } else if (currentPage <= 3) {
-                  page = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  page = totalPages - 4 + i;
-                } else {
-                  page = currentPage - 2 + i;
-                }
-                
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePageChange(page)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+        <div className="flex-shrink-0 mt-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length} results
             </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previously
+              </Button>
+              
+              {/* Page Numbers */}
+              <div className="flex space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let page;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(page)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+              </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}

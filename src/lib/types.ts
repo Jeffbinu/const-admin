@@ -21,6 +21,9 @@ export interface Project {
   name: string;
   clientName: string;
   clientAddress: string;
+  projectAddress: string; // Add this - you're now collecting project site address
+  phoneNumber: string; // Add this - required contact field
+  email?: string; // Add this - optional contact field
   dateCreated: string;
   agreementDate: string;
   projectType: string;
@@ -30,7 +33,6 @@ export interface Project {
   status: 'New' | 'Under Construction' | 'Completed' | 'On Hold' | 'Opportunity';
   timeline: TimelineEvent[];
 }
-
 export interface LineItem {
   id: string;
   name: string;
@@ -98,6 +100,9 @@ export interface ProjectFormData {
   projectDuration: number;
   estimatedBudget: number;
   status: Project['status'];
+  projectAddress: string;
+  phoneNumber: string;
+  email?: string; // Optional contact field
 }
 
 export interface LineItemFormData {

@@ -55,10 +55,10 @@ const Modal: React.FC<ModalProps> = ({
         onClick={onClose}
       />
       <div className={cn(
-        "relative bg-white rounded-lg shadow-xl w-full mx-4 max-h-[90vh] overflow-y-auto",
+        "relative bg-white rounded-lg shadow-xl w-full mx-4 h-[90vh] ",
         sizeClasses[size]
       )}>
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b h-[10%] w-full">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           {showCloseButton && (
             <Button
@@ -71,7 +71,7 @@ const Modal: React.FC<ModalProps> = ({
             </Button>
           )}
         </div>
-        <div className="p-6">
+        <div className="p-6 h-[90%] overflow-scroll">
           {children}
         </div>
       </div>
