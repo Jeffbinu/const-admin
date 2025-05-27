@@ -30,7 +30,7 @@ export interface Project {
   numberOfFloors: number;
   projectDuration: number;
   estimatedBudget: number;
-  status: 'New' | 'Under Construction' | 'Completed' | 'On Hold' | 'Opportunity';
+  status: 'New' | 'Under Construction' | 'Completed' | 'On Hold' | 'Opportunity Lost';
   timeline: TimelineEvent[];
 }
 export interface LineItem {

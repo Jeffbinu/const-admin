@@ -19,6 +19,7 @@ import {
   LineItem,
   ProjectEstimation,
   ProjectEstimationItem,
+  TimelineEvent,
 } from "@/lib/types";
 import {
   ArrowLeft,
@@ -27,19 +28,85 @@ import {
   Download,
   Plus,
   FileText,
-  Calendar,
   MapPin,
   User,
   Building,
-  Clock,
-  DollarSign,
   Eye,
   Trash2,
-  History,
   Save,
   X,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
-import ProjectEditModal from "@/components/ui/ProjectEditModal";
+
+// Confirmation Modal Component
+const ConfirmationModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmText?: string;
+  isLoading?: boolean;
+}> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = "Confirm",
+  isLoading = false,
+}) => (
+  <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+    <div className="space-y-4">
+      <div className="flex items-start space-x-3">
+        <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
+        <p className="text-gray-700">{message}</p>
+      </div>
+      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+        <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button onClick={onConfirm} disabled={isLoading}>
+          {isLoading ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-white mr-2" />
+          ) : null}
+          {confirmText}
+        </Button>
+      </div>
+    </div>
+  </Modal>
+);
+
+// Inline Edit Form Component
+const InlineEditForm: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  onSave: () => Promise<void>;
+  isSaving?: boolean;
+}> = ({ isOpen, onClose, title, children, onSave, isSaving = false }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title={title} size="md">
+    <div className="space-y-6">
+      {children}
+      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          <X className="h-4 w-4 mr-2" />
+          Cancel
+        </Button>
+        <Button onClick={onSave} disabled={isSaving}>
+          {isSaving ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-white mr-2" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          Save Changes
+        </Button>
+      </div>
+    </div>
+  </Modal>
+);
 
 export default function ProjectDetailsPage() {
   const params = useParams();
@@ -62,7 +129,36 @@ export default function ProjectDetailsPage() {
   const [showEstimationDetails, setShowEstimationDetails] = useState(false);
   const [editingEstimation, setEditingEstimation] =
     useState<ProjectEstimationItem | null>(null);
-  const [isProjectEditModalOpen, setIsProjectEditModalOpen] = useState(false);
+
+  // Inline editing states
+  const [isEditingClient, setIsEditingClient] = useState(false);
+  const [isEditingProject, setIsEditingProject] = useState(false);
+  const [isSavingInline, setIsSavingInline] = useState(false);
+  const [showStatusConfirmation, setShowStatusConfirmation] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    oldStatus: Project["status"];
+    newStatus: Project["status"];
+  } | null>(null);
+
+  // Form data states
+  const [clientFormData, setClientFormData] = useState({
+    clientName: "",
+    clientAddress: "",
+    phoneNumber: "",
+  });
+
+  const [projectFormData, setProjectFormData] = useState({
+    name: "",
+    projectType: "",
+    numberOfFloors: 1,
+    projectDuration: 1,
+    estimatedBudget: 0,
+    projectAddress: "",
+    agreementDate: "",
+  });
+
+  const [statusFormData, setStatusFormData] =
+    useState<Project["status"]>("New");
 
   const projectId = params.id as string;
 
@@ -70,8 +166,26 @@ export default function ProjectDetailsPage() {
     const fetchProject = async () => {
       try {
         setIsLoading(true);
-        const projectData = await dataManager.getProject(projectId);
+        const projectData: any = await dataManager.getProject(projectId);
         setProject(projectData);
+
+        setClientFormData({
+          clientName: projectData.clientName,
+          clientAddress: projectData.clientAddress,
+          phoneNumber: projectData.phoneNumber || "",
+        });
+
+        setProjectFormData({
+          name: projectData.name,
+          projectType: projectData.projectType,
+          numberOfFloors: projectData.numberOfFloors,
+          projectDuration: projectData.projectDuration,
+          estimatedBudget: projectData.estimatedBudget,
+          projectAddress: projectData.projectAddress || "",
+          agreementDate: projectData.agreementDate,
+        });
+
+        setStatusFormData(projectData.status);
 
         // Fetch project estimations
         const estimations = await dataManager.getProjectEstimations(projectId);
@@ -105,26 +219,141 @@ export default function ProjectDetailsPage() {
         return "success";
       case "On Hold":
         return "destructive";
-      case "Opportunity":
+      case "Opportunity Lost":
         return "secondary";
       default:
         return "default";
     }
   };
 
-  const handleProjectUpdate = async (updates: Partial<Project>) => {
+  // Add timeline event helper
+  const addTimelineEvent = async (event: Omit<TimelineEvent, "id">) => {
+    if (!project) return;
+
+    try {
+      const newEvent: TimelineEvent = {
+        ...event,
+        id: `timeline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      };
+
+      const updatedTimeline = [...project.timeline, newEvent].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      const updatedProject = { ...project, timeline: updatedTimeline };
+      setProject(updatedProject);
+
+      // Save to backend
+      await dataManager.updateProject(project.id, {
+        timeline: updatedTimeline,
+      });
+    } catch (error) {
+      console.error("Failed to add timeline event:", error);
+    }
+  };
+
+  // Handle client information save
+  const handleSaveClientInfo = async () => {
+    if (!project) return;
+
+    setIsSavingInline(true);
     try {
       const updatedProject = await dataManager.updateProject(
-        project!.id,
-        updates
+        project.id,
+        clientFormData
       );
       if (updatedProject) {
         setProject(updatedProject);
-        showToast("Project updated successfully", "success");
-        setIsProjectEditModalOpen(false);
+        setIsEditingClient(false);
+        showToast("Client information updated successfully", "success");
+
+        // Add timeline event
+        await addTimelineEvent({
+          title: "Client Information Updated",
+          description: "Client details have been modified",
+          date: new Date().toISOString(),
+          status: "completed",
+        });
       }
     } catch (error) {
-      showToast("Failed to update project", "error");
+      showToast("Failed to update client information", "error");
+    } finally {
+      setIsSavingInline(false);
+    }
+  };
+
+  // Handle project details save
+  const handleSaveProjectDetails = async () => {
+    if (!project) return;
+
+    setIsSavingInline(true);
+    try {
+      const updatedProject = await dataManager.updateProject(
+        project.id,
+        projectFormData
+      );
+      if (updatedProject) {
+        setProject(updatedProject);
+        setIsEditingProject(false);
+        showToast("Project details updated successfully", "success");
+
+        // Add timeline event
+        await addTimelineEvent({
+          title: "Project Details Updated",
+          description: "Project information has been modified",
+          date: new Date().toISOString(),
+          status: "completed",
+        });
+      }
+    } catch (error) {
+      showToast("Failed to update project details", "error");
+    } finally {
+      setIsSavingInline(false);
+    }
+  };
+
+  // Handle status change with confirmation
+  const handleStatusChange = (newStatus: Project["status"]) => {
+    if (!project || newStatus === project.status) return;
+
+    setPendingStatusChange({
+      oldStatus: project.status,
+      newStatus: newStatus,
+    });
+    setShowStatusConfirmation(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!project || !pendingStatusChange) return;
+
+    setIsSavingInline(true);
+    try {
+      const updatedProject = await dataManager.updateProject(project.id, {
+        status: pendingStatusChange.newStatus,
+      });
+
+      if (updatedProject) {
+        setProject(updatedProject);
+        setStatusFormData(pendingStatusChange.newStatus);
+        showToast(
+          `Project status changed to ${pendingStatusChange.newStatus}`,
+          "success"
+        );
+
+        // Add timeline event for status change
+        await addTimelineEvent({
+          title: `Status Changed: ${pendingStatusChange.oldStatus} → ${pendingStatusChange.newStatus}`,
+          description: `Project status updated from ${pendingStatusChange.oldStatus} to ${pendingStatusChange.newStatus}`,
+          date: new Date().toISOString(),
+          status: "completed",
+        });
+      }
+    } catch (error) {
+      showToast("Failed to update project status", "error");
+    } finally {
+      setIsSavingInline(false);
+      setShowStatusConfirmation(false);
+      setPendingStatusChange(null);
     }
   };
 
@@ -146,6 +375,14 @@ export default function ProjectDetailsPage() {
       showToast("Estimation created successfully", "success");
       setIsEstimationModalOpen(false);
       setSelectedTemplate(null);
+
+      // Add timeline event
+      await addTimelineEvent({
+        title: `New Estimation Created: ${newEstimation.name}`,
+        description: `Estimation based on ${template.name} template with ${newEstimation.items.length} items`,
+        date: new Date().toISOString(),
+        status: "completed",
+      });
     } catch (error) {
       showToast("Failed to create estimation", "error");
     }
@@ -254,6 +491,14 @@ export default function ProjectDetailsPage() {
         `);
         printWindow.document.close();
         showToast("Agreement generated successfully", "success");
+
+        // Add timeline event
+        await addTimelineEvent({
+          title: "Agreement Generated",
+          description: "Project agreement document has been generated",
+          date: new Date().toISOString(),
+          status: "completed",
+        });
       }
     } catch (error) {
       console.error("Failed to generate agreement:", error);
@@ -261,176 +506,252 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  // Overview Tab Content
-  const OverviewTab = () => (
-    <div className="p-6 space-y-8">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-blue-50 rounded-lg p-6">
-          <div className="flex items-center">
-            <Building className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-blue-600">Floors</p>
-              <p className="text-2xl font-bold text-blue-900">
-                {project?.numberOfFloors}
-              </p>
-            </div>
-          </div>
-        </div>
+  // Enhanced Overview Tab with inline editing
+  const OverviewTab = () => {
+    const getMostRecentEstimation = () => {
+      if (!projectEstimations.length) return null;
+      const activeEstimation = projectEstimations.find((est) => est.isActive);
+      if (activeEstimation) return activeEstimation;
+      return projectEstimations.reduce((latest, current) =>
+        new Date(current.updatedDate) > new Date(latest.updatedDate)
+          ? current
+          : latest
+      );
+    };
 
-        <div className="bg-green-50 rounded-lg p-6">
-          <div className="flex items-center">
-            <Clock className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-green-600">Duration</p>
-              <p className="text-2xl font-bold text-green-900">
-                {project?.projectDuration}m
-              </p>
-            </div>
-          </div>
-        </div>
+    const mostRecentEstimation = getMostRecentEstimation();
+    const hasEstimations = projectEstimations.length > 0;
 
-        <div className="bg-purple-50 rounded-lg p-6">
-          <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-purple-600">
-                Current Estimate
-              </p>
-              <p className="text-xl font-bold text-purple-900">
-                ₹
-                {currentEstimation?.totalAmount?.toLocaleString("en-IN") ||
-                  "N/A"}
-              </p>
-            </div>
-          </div>
-        </div>
+    const handleCreateEstimationShortcut = () => {
+      setActiveTab("estimations");
+      setTimeout(() => {
+        setIsEstimationModalOpen(true);
+      }, 100);
+    };
 
-        <div className="bg-yellow-50 rounded-lg p-6">
-          <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-yellow-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-yellow-600">Started</p>
-              <p className="text-sm font-bold text-yellow-900">
-                {project?.dateCreated &&
-                  new Date(project.dateCreated).toLocaleDateString("en-GB")}
-              </p>
+    return (
+      <div className="p-6 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Client Information with inline edit */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <User className="h-5 w-5 text-gray-500 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Client Information
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEditingClient(true)}
+                className="text-blue-600 cursor-pointer hover:text-blue-800 text-sm font-medium flex items-center transition-colors"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Client Information */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <div className="flex items-center mb-6">
-            <User className="h-5 w-5 text-gray-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Client Information
-            </h3>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">
-                Client Name
-              </label>
-              <p className="text-gray-900 font-medium">{project?.clientName}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">
-                <MapPin className="h-4 w-4 inline mr-1" />
-                Address
-              </label>
-              <p className="text-gray-900">{project?.clientAddress}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Project Details */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <div className="flex items-center mb-6">
-            <FileText className="h-5 w-5 text-gray-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Project Details
-            </h3>
-          </div>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <label className="text-sm font-medium text-gray-500">
-                Date Created
-              </label>
-              <p className="text-gray-900">
-                {project?.dateCreated &&
-                  new Date(project.dateCreated).toLocaleDateString("en-GB")}
-              </p>
-            </div>
-            <div className="flex justify-between">
-              <label className="text-sm font-medium text-gray-500">
-                Agreement Date
-              </label>
-              <p className="text-gray-900">
-                {project?.agreementDate &&
-                  new Date(project.agreementDate).toLocaleDateString("en-GB")}
-              </p>
-            </div>
-            <div className="flex justify-between">
-              <label className="text-sm font-medium text-gray-500">
-                Project Type
-              </label>
-              <Badge variant="secondary">{project?.projectType}</Badge>
-            </div>
-            <div className="flex justify-between">
-              <label className="text-sm font-medium text-gray-500">
-                Status
-              </label>
-              <Badge variant={getStatusBadgeVariant(project?.status || "New")}>
-                {project?.status}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Project Timeline */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">
-          Project Timeline
-        </h3>
-        <div className="space-y-4">
-          {project?.timeline.map((event) => (
-            <div key={event.id} className="flex items-start space-x-4">
-              <div
-                className={`flex-shrink-0 w-3 h-3 rounded-full mt-1 ${
-                  event.status === "completed"
-                    ? "bg-green-500"
-                    : event.status === "in-progress"
-                    ? "bg-blue-500"
-                    : "bg-gray-300"
-                }`}
-              />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-900">
-                    {event.title}
-                  </h4>
-                  <span className="text-sm text-gray-500">
-                    {new Date(event.date).toLocaleDateString("en-GB")}
-                  </span>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Client Name
+                </label>
+                <p className="text-gray-900 font-medium">
+                  {project?.clientName}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  <MapPin className="h-4 w-4 inline mr-1" />
+                  Address
+                </label>
+                <p className="text-gray-900">{project?.clientAddress}</p>
+              </div>
+              {project?.phoneNumber && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Phone Number
+                  </label>
+                  <p className="text-gray-900">{project.phoneNumber}</p>
                 </div>
-                {event.description && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    {event.description}
-                  </p>
+              )}
+            </div>
+          </div>
+
+          {/* Project Details with inline edit */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <FileText className="h-5 w-5 text-gray-500 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Project Details
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEditingProject(true)}
+                className="text-blue-600 cursor-pointer hover:text-blue-800 text-sm font-medium flex items-center transition-colors"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <label className="text-sm font-medium text-gray-500">
+                  Date Created
+                </label>
+                <p className="text-gray-900">
+                  {project?.dateCreated &&
+                    new Date(project.dateCreated).toLocaleDateString("en-GB")}
+                </p>
+              </div>
+
+              {/* Smart Agreement Date Section */}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <label className="text-sm font-medium text-gray-500">
+                    Agreement Date
+                  </label>
+                  {hasEstimations && mostRecentEstimation && (
+                    <div className="ml-2 group relative">
+                      <div className="h-4 w-4 rounded-full bg-blue-100 flex items-center justify-center cursor-help">
+                        <span className="text-xs text-blue-600 font-bold">
+                          i
+                        </span>
+                      </div>
+                      <div className="absolute left-0 top-6 z-10 invisible group-hover:visible bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg min-w-max">
+                        {mostRecentEstimation.name}
+                        <br />
+                        Last updated:{" "}
+                        {new Date(
+                          mostRecentEstimation.updatedDate
+                        ).toLocaleDateString("en-GB")}
+                        <div className="absolute -top-1 left-3 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-b-4 border-b-gray-900"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {hasEstimations && mostRecentEstimation ? (
+                  <div className="text-right">
+                    <p className="text-gray-900 font-medium">
+                      {new Date(
+                        mostRecentEstimation.updatedDate
+                      ).toLocaleDateString("en-GB")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-right">
+                    <button
+                      onClick={handleCreateEstimationShortcut}
+                      className="text-[0.8rem] cursor-pointer text-blue-600 hover:text-blue-800 hover:underline mt-1 transition-colors"
+                    >
+                      Create an estimate
+                    </button>
+                    <span className="text-[0.8rem] cursor-pointer mt-1 transition-colors">
+                      {" "}
+                      to see agreement date
+                    </span>
+                  </div>
                 )}
               </div>
+
+              <div className="flex justify-between">
+                <label className="text-sm font-medium text-gray-500">
+                  Project Type
+                </label>
+                <Badge variant="secondary">{project?.projectType}</Badge>
+              </div>
+
+              {/* Status with inline edit */}
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-500">
+                  Status
+                </label>
+                <div className="flex items-center space-x-2">
+                  <Badge
+                    variant={getStatusBadgeVariant(project?.status || "New")}
+                  >
+                    {project?.status}
+                  </Badge>
+                  <select
+                    value={statusFormData}
+                    onChange={(e) =>
+                      handleStatusChange(e.target.value as Project["status"])
+                    }
+                    className="text-xs bg-transparent border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="New">New</option>
+                    <option value="Under Construction">
+                      Under Construction
+                    </option>
+                    <option value="Opportunity Lost">Opportunity Lost</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* Project Timeline - Enhanced with better sorting */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            Project Timeline
+          </h3>
+          <div className="space-y-4">
+            {/* Combine and sort all timeline events */}
+            {[
+              ...(project?.timeline || []),
+              ...projectEstimations.map((estimation) => ({
+                id: `timeline-estimation-${estimation.id}`,
+                title: `Estimation Created: ${estimation.name}`,
+                description: `Project valuation: ₹${estimation.totalAmount.toLocaleString(
+                  "en-IN"
+                )} • ${estimation.items.length} items${
+                  estimation.isActive ? " (Active)" : ""
+                }`,
+                date: estimation.createdDate,
+                status: "completed" as const,
+              })),
+            ]
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+              .map((event) => (
+                <div key={event.id} className="flex items-start space-x-4">
+                  <div
+                    className={`flex-shrink-0 w-3 h-3 rounded-full mt-1 ${
+                      event.status === "completed"
+                        ? "bg-green-500"
+                        : event.status === "in-progress"
+                        ? "bg-blue-500"
+                        : "bg-gray-300"
+                    }`}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900">
+                        {event.title}
+                      </h4>
+                      <span className="text-sm text-gray-500">
+                        {new Date(event.date).toLocaleDateString("en-GB")}
+                      </span>
+                    </div>
+                    {event.description && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {event.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  // Enhanced Estimations Tab Content
   const EstimationsTab = () => {
     const estimationItemColumns: TableColumn<ProjectEstimationItem>[] = [
       {
@@ -458,7 +779,7 @@ export default function ProjectDetailsPage() {
         header: "Quantity",
         accessor: "quantity",
         sortable: true,
-        render: (value, row) => (
+        render: (value) => (
           <div className="text-center">
             <span className="font-medium">{value}</span>
           </div>
@@ -522,7 +843,7 @@ export default function ProjectDetailsPage() {
     );
 
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-4">
         {/* Estimation Version Control */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex justify-between items-center mb-6">
@@ -712,7 +1033,7 @@ export default function ProjectDetailsPage() {
 
   // Agreements Tab Content
   const AgreementsTab = () => (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-4">
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -848,6 +1169,13 @@ export default function ProjectDetailsPage() {
     },
   ];
 
+  const handleCreateEstimationShortcut = () => {
+    setActiveTab("estimations");
+    setTimeout(() => {
+      setIsEstimationModalOpen(true);
+    }, 100);
+  };
+
   return (
     <>
       <DashboardLayout
@@ -866,20 +1194,16 @@ export default function ProjectDetailsPage() {
               Back to Projects
             </Button>
             <Button
+              onClick={handleCreateEstimationShortcut}
               variant="outline"
-              onClick={() => setIsProjectEditModalOpen(true)}
+              className="bg-blue-500 text-white"
             >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Project
-            </Button>
-            <Button variant="outline">
-              <MoreHorizontal className="h-4 w-4" />
-              More Actions
+              Go to Estimations
             </Button>
           </div>
         }
       >
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Project Status Header */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -930,6 +1254,156 @@ export default function ProjectDetailsPage() {
           </div>
         </div>
       </DashboardLayout>
+
+      {/* Client Information Inline Edit Modal */}
+      <InlineEditForm
+        isOpen={isEditingClient}
+        onClose={() => setIsEditingClient(false)}
+        title="Edit Client Information"
+        onSave={handleSaveClientInfo}
+        isSaving={isSavingInline}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Client Name *
+            </label>
+            <input
+              type="text"
+              value={clientFormData.clientName}
+              onChange={(e) =>
+                setClientFormData((prev) => ({
+                  ...prev,
+                  clientName: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Client Address *
+            </label>
+            <textarea
+              value={clientFormData.clientAddress}
+              onChange={(e) =>
+                setClientFormData((prev) => ({
+                  ...prev,
+                  clientAddress: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={clientFormData.phoneNumber}
+              onChange={(e) =>
+                setClientFormData((prev) => ({
+                  ...prev,
+                  phoneNumber: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </InlineEditForm>
+
+      {/* Project Details Inline Edit Modal */}
+      <InlineEditForm
+        isOpen={isEditingProject}
+        onClose={() => setIsEditingProject(false)}
+        title="Edit Project Details"
+        onSave={handleSaveProjectDetails}
+        isSaving={isSavingInline}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Name *
+            </label>
+            <input
+              type="text"
+              value={projectFormData.name}
+              onChange={(e) =>
+                setProjectFormData((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Project Type *
+              </label>
+              <select
+                value={projectFormData.projectType}
+                onChange={(e) =>
+                  setProjectFormData((prev) => ({
+                    ...prev,
+                    projectType: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Industrial">Industrial</option>
+                <option value="Institutional">Institutional</option>
+                <option value="Interior Fit-out">Interior Fit-out</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Floors *
+              </label>
+              <input
+                type="number"
+                value={projectFormData.numberOfFloors}
+                onChange={(e) =>
+                  setProjectFormData((prev) => ({
+                    ...prev,
+                    numberOfFloors: parseInt(e.target.value) || 1,
+                  }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="1"
+              />
+            </div>
+          </div>
+        </div>
+      </InlineEditForm>
+
+      {/* Status Change Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showStatusConfirmation}
+        onClose={() => {
+          setShowStatusConfirmation(false);
+          setPendingStatusChange(null);
+        }}
+        onConfirm={confirmStatusChange}
+        title="Confirm Status Change"
+        message={
+          pendingStatusChange
+            ? `Are you sure you want to change the project status from "${pendingStatusChange.oldStatus}" to "${pendingStatusChange.newStatus}"?`
+            : ""
+        }
+        confirmText="Change Status"
+        isLoading={isSavingInline}
+      />
 
       {/* Template Selection Modal */}
       <Modal
@@ -1030,17 +1504,6 @@ export default function ProjectDetailsPage() {
             onCancel={() => setEditingEstimation(null)}
           />
         </Modal>
-      )}
-
-      {/* Enhanced Project Edit Modal */}
-      {project && (
-        <ProjectEditModal
-          isOpen={isProjectEditModalOpen}
-          onClose={() => setIsProjectEditModalOpen(false)}
-          project={project}
-          onSave={handleProjectUpdate}
-          isLoading={false}
-        />
       )}
     </>
   );

@@ -44,7 +44,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabChange, className }:a
           </button>
         ))}
       </nav>
-      <div className="mt-6">
+      <div className="mt-2">
         {tabs.find((tab:any) => tab.id === activeTab)?.content}
       </div>
     </div>

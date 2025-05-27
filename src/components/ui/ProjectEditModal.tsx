@@ -153,7 +153,9 @@ export default function ProjectEditModal({
               <option value="Commercial">Commercial</option>
               <option value="Industrial">Industrial</option>
               <option value="Renovation">Renovation</option>
-              <option value="New Construction">New Construction</option>
+              <option value="New Construction">Other</option>
+
+              
             </select>
           </div>
 
@@ -170,7 +172,7 @@ export default function ProjectEditModal({
               <option value="Under Construction">Under Construction</option>
               <option value="Completed">Completed</option>
               <option value="On Hold">On Hold</option>
-              <option value="Opportunity">Opportunity</option>
+              <option value="Opportunity Lost">Opportunity Lost</option>
             </select>
           </div>
 

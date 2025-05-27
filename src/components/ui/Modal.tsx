@@ -1,15 +1,16 @@
-import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
-import { Button } from './Button';
-import { cn } from '@/lib/utils';
+import React, { useEffect } from "react";
+import { X } from "lucide-react";
+import { Button } from "./Button";
+import { cn } from "@/lib/utils";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
   showCloseButton?: boolean;
+  custom_class?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -17,47 +18,50 @@ const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
-  size = 'md',
+  size = "md",
   showCloseButton = true,
+  custom_class = "",
 }) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-    '2xl': 'max-w-6xl',
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
+    "2xl": "max-w-6xl",
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
+      <div
         className="fixed inset-0 bg-blur bg-opacity-50 transition-opacity backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className={cn(
-        "relative bg-white rounded-lg shadow-xl w-full mx-4 h-[90vh] ",
-        sizeClasses[size]
-      )}>
+      <div
+        className={cn(
+          `relative bg-white rounded-lg shadow-xl w-full mx-4 ${custom_class}`,
+          sizeClasses[size]
+        )}
+      >
         <div className="flex items-center justify-between p-6 border-b h-[10%] w-full">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           {showCloseButton && (
@@ -71,13 +75,11 @@ const Modal: React.FC<ModalProps> = ({
             </Button>
           )}
         </div>
-        <div className="p-6 h-[90%] overflow-scroll">
-          {children}
-        </div>
+        <div className="p-6 h-[90%]  overflow-y-scroll">{children}</div>
       </div>
     </div>
   );
 };
 
-Modal.displayName = 'Modal';
+Modal.displayName = "Modal";
 export { Modal };

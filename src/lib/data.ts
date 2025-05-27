@@ -69,7 +69,7 @@ export const mockProjects: Project[] = [
     numberOfFloors: 4,
     projectDuration: 12,
     estimatedBudget: 8500000,
-    status: "Opportunity",
+    status: "Opportunity Lost",
     timeline: [
       {
         id: "t4",
@@ -123,7 +123,7 @@ export const mockProjects: Project[] = [
     clientAddress: "321 IT Park, Hyderabad",
     dateCreated: "2025-04-01",
     agreementDate: "2025-04-05",
-    projectType: "New Construction",
+    projectType: "Commercial",
     numberOfFloors: 6,
     projectDuration: 10,
     estimatedBudget: 6500000,

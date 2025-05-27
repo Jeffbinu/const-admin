@@ -9,7 +9,7 @@ export default function DashboardPage() {
   const quickActions = [
     {
       title: 'New Project',
-      description: 'Create a new construction project',
+      description: 'Create a new project',
       icon: Plus,
       href: '/dashboard/projects',
       color: 'bg-blue-500',

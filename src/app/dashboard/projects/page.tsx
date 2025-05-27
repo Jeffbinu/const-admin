@@ -1,50 +1,53 @@
-'use client';
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { Badge } from '@/components/ui/Badge';
-import DataTable from '@/components/ui/DataTable';
-import { useProjects } from '@/hooks/useProjects';
-import { Project, TableColumn, ProjectFormData } from '@/lib/types';
-import { Plus, Edit, Trash2, Calendar, MapPin, DollarSign } from 'lucide-react';
-import ProjectForm from '@/components/forms/ProjectForm';
+"use client";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { Badge } from "@/components/ui/Badge";
+import DataTable from "@/components/ui/DataTable";
+import { useProjects } from "@/hooks/useProjects";
+import { Project, TableColumn, ProjectFormData } from "@/lib/types";
+import { Plus, Edit, Trash2, Calendar, MapPin, DollarSign } from "lucide-react";
+import ProjectForm from "@/components/forms/ProjectForm";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { projects, isLoading, createProject, updateProject, deleteProject } = useProjects();
+  const { projects, isLoading, createProject, updateProject, deleteProject } =
+    useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFormLoading, setIsFormLoading] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  const getStatusBadgeVariant = (status: Project['status']) => {
+  const getStatusBadgeVariant = (status: Project["status"]) => {
     switch (status) {
-      case 'New':
-        return 'info';
-      case 'Under Construction':
-        return 'warning';
-      case 'Completed':
-        return 'success';
-      case 'On Hold':
-        return 'destructive';
-      case 'Opportunity':
-        return 'secondary';
+      case "New":
+        return "info";
+      case "Under Construction":
+        return "warning";
+      case "Completed":
+        return "success";
+      case "On Hold":
+        return "destructive";
+      case "Opportunity Lost":
+        return "secondary";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   const columns: TableColumn<Project>[] = [
     {
-      id: 'name',
-      header: 'Project Details',
-      accessor: 'name',
+      id: "name",
+      header: "Project Details",
+      accessor: "name",
       sortable: true,
       filterable: true,
       render: (value, row) => (
         <div className="cursor-pointer">
-          <div className="font-medium text-gray-900 hover:text-blue-600">{value}</div>
+          <div className="font-medium text-gray-900 hover:text-blue-600">
+            {value}
+          </div>
           <div className="text-sm text-gray-500">{row.id}</div>
           <div className="text-xs text-gray-400 mt-1 flex items-center space-x-2">
             <span className="flex items-center">
@@ -60,26 +63,24 @@ export default function ProjectsPage() {
       ),
     },
     {
-      id: 'dateCreated',
-      header: 'Date',
-      accessor: 'dateCreated',
+      id: "dateCreated",
+      header: "Date",
+      accessor: "dateCreated",
       sortable: true,
       render: (value) => (
         <div className="text-sm text-gray-900">
-          {new Date(value).toLocaleDateString('en-GB')}
+          {new Date(value).toLocaleDateString("en-GB")}
         </div>
       ),
     },
     {
-      id: 'status',
-      header: 'Status',
-      accessor: 'status',
+      id: "status",
+      header: "Status",
+      accessor: "status",
       sortable: true,
       filterable: true,
       render: (value) => (
-        <Badge variant={getStatusBadgeVariant(value)}>
-          {value}
-        </Badge>
+        <Badge variant={getStatusBadgeVariant(value)}>{value}</Badge>
       ),
     },
   ];
@@ -115,9 +116,9 @@ export default function ProjectsPage() {
 
   const handleDeleteProject = async (project: Project) => {
     const confirmMessage = `⚠️ Delete Project\n\nProject: "${project.name}"\nClient: ${project.clientName}\n\nThis will permanently delete:\n• All project data\n• Estimation versions\n• Agreement versions\n• Timeline history\n\nType "DELETE" to confirm:`;
-    
+
     const userConfirmation = window.prompt(confirmMessage);
-    if (userConfirmation === 'DELETE') {
+    if (userConfirmation === "DELETE") {
       await deleteProject(project.id);
     } else if (userConfirmation !== null) {
       alert('Deletion cancelled. Please type "DELETE" exactly to confirm.');
@@ -192,8 +193,13 @@ export default function ProjectsPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={editingProject ? `Edit Project - ${editingProject.name}` : "Add New Project"}
+        title={
+          editingProject
+            ? `Edit Project - ${editingProject.name}`
+            : "Add New Project"
+        }
         size="2xl"
+        custom_class="h-[90vh]"
       >
         <ProjectForm
           onSubmit={handleCreateProject}
