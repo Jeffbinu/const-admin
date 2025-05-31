@@ -5,14 +5,14 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
 }
 
 export interface TimelineEvent {
   id: string;
   title: string;
   date: string;
-  status: 'completed' | 'in-progress' | 'pending';
+  status: "completed" | "in-progress" | "pending";
   description?: string;
 }
 
@@ -30,7 +30,12 @@ export interface Project {
   numberOfFloors: number;
   projectDuration: number;
   estimatedBudget: number;
-  status: 'New' | 'Under Construction' | 'Completed' | 'On Hold' | 'Opportunity Lost';
+  status:
+    | "New"
+    | "Under Construction"
+    | "Completed"
+    | "On Hold"
+    | "Opportunity Lost";
   timeline: TimelineEvent[];
 }
 export interface LineItem {
@@ -40,6 +45,7 @@ export interface LineItem {
   unit: string;
   rate: number;
   description?: string;
+  align?: string;
 }
 
 export interface EstimationTemplateItem {
@@ -99,7 +105,7 @@ export interface ProjectFormData {
   numberOfFloors: number;
   projectDuration: number;
   estimatedBudget: number;
-  status: Project['status'];
+  status: Project["status"];
   projectAddress: string;
   phoneNumber: string;
   email?: string; // Optional contact field
@@ -127,6 +133,7 @@ export interface TableColumn<T> {
   sortable?: boolean;
   filterable?: boolean;
   render?: (value: any, row: T) => React.ReactNode;
+  align?: "left" | "center" | "right";
 }
 
 export interface TabItem {
@@ -138,31 +145,31 @@ export interface TabItem {
 }
 
 // Badge Variants
-export type BadgeVariant = 
-  | 'default'
-  | 'secondary' 
-  | 'destructive'
-  | 'outline'
-  | 'success'
-  | 'warning'
-  | 'info';
+export type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "success"
+  | "warning"
+  | "info";
 
-// Button Variants  
-export type ButtonVariant = 
-  | 'default'
-  | 'destructive'
-  | 'outline'
-  | 'secondary'
-  | 'ghost'
-  | 'link';
+// Button Variants
+export type ButtonVariant =
+  | "default"
+  | "destructive"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "link";
 
-export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
+export type ButtonSize = "default" | "sm" | "lg" | "icon";
 
 // Modal Sizes
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "full";
 
 // Toast Types
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = "success" | "error" | "info" | "warning";
 
 // API Response Types
 export interface ApiResponse<T> {
@@ -199,7 +206,7 @@ export interface FilterOption {
 
 export interface SearchFilters {
   query?: string;
-  status?: Project['status'][];
+  status?: Project["status"][];
   projectType?: string[];
   dateRange?: {
     start: string;
@@ -222,7 +229,7 @@ export interface PaginationOptions {
 // Sort Types
 export interface SortOption {
   field: string;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // Export Types for Hook Returns
@@ -230,7 +237,10 @@ export interface UseProjectsReturn {
   projects: Project[];
   isLoading: boolean;
   createProject: (data: ProjectFormData) => Promise<Project | null>;
-  updateProject: (id: string, updates: Partial<Project>) => Promise<Project | null>;
+  updateProject: (
+    id: string,
+    updates: Partial<Project>
+  ) => Promise<Project | null>;
   deleteProject: (id: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
@@ -239,7 +249,10 @@ export interface UseLineItemsReturn {
   lineItems: LineItem[];
   isLoading: boolean;
   createLineItem: (data: LineItemFormData) => Promise<LineItem | null>;
-  updateLineItem: (id: string, updates: Partial<LineItem>) => Promise<LineItem | null>;
+  updateLineItem: (
+    id: string,
+    updates: Partial<LineItem>
+  ) => Promise<LineItem | null>;
   deleteLineItem: (id: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
@@ -247,8 +260,13 @@ export interface UseLineItemsReturn {
 export interface UseEstimationTemplatesReturn {
   templates: EstimationTemplate[];
   isLoading: boolean;
-  createTemplate: (data: EstimationTemplateFormData) => Promise<EstimationTemplate | null>;
-  updateTemplate: (id: string, updates: Partial<EstimationTemplate>) => Promise<EstimationTemplate | null>;
+  createTemplate: (
+    data: EstimationTemplateFormData
+  ) => Promise<EstimationTemplate | null>;
+  updateTemplate: (
+    id: string,
+    updates: Partial<EstimationTemplate>
+  ) => Promise<EstimationTemplate | null>;
   deleteTemplate: (id: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
@@ -257,11 +275,25 @@ export interface UseEstimationTemplatesReturn {
 export interface UseProjectEstimationsReturn {
   estimations: ProjectEstimation[];
   isLoading: boolean;
-  createFromTemplate: (projectId: string, templateId: string, name: string) => Promise<ProjectEstimation | null>;
-  updateItem: (estimationId: string, itemId: string, updates: Partial<ProjectEstimationItem>) => Promise<ProjectEstimation | null>;
-  deleteItem: (estimationId: string, itemId: string) => Promise<ProjectEstimation | null>;
+  createFromTemplate: (
+    projectId: string,
+    templateId: string,
+    name: string
+  ) => Promise<ProjectEstimation | null>;
+  updateItem: (
+    estimationId: string,
+    itemId: string,
+    updates: Partial<ProjectEstimationItem>
+  ) => Promise<ProjectEstimation | null>;
+  deleteItem: (
+    estimationId: string,
+    itemId: string
+  ) => Promise<ProjectEstimation | null>;
   setActive: (projectId: string, estimationId: string) => Promise<boolean>;
-  duplicate: (estimationId: string, newName: string) => Promise<ProjectEstimation | null>;
+  duplicate: (
+    estimationId: string,
+    newName: string
+  ) => Promise<ProjectEstimation | null>;
   deleteEstimation: (estimationId: string) => Promise<boolean>;
   refetch: (projectId: string) => Promise<void>;
 }
@@ -298,7 +330,7 @@ export interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  type?: 'button' | 'submit' | 'reset';
+  type?: "button" | "submit" | "reset";
   className?: string;
 }
 
@@ -320,7 +352,14 @@ export interface ValidationRule {
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'number' | 'email' | 'password' | 'textarea' | 'select' | 'date';
+  type:
+    | "text"
+    | "number"
+    | "email"
+    | "password"
+    | "textarea"
+    | "select"
+    | "date";
   rules?: ValidationRule;
   options?: { label: string; value: string }[];
   placeholder?: string;
@@ -340,9 +379,9 @@ export interface AppConfig {
 // Audit Types for tracking changes
 export interface AuditLog {
   id: string;
-  entityType: 'project' | 'estimation' | 'lineItem' | 'template';
+  entityType: "project" | "estimation" | "lineItem" | "template";
   entityId: string;
-  action: 'create' | 'update' | 'delete';
+  action: "create" | "update" | "delete";
   changes: Record<string, { old: any; new: any }>;
   userId: string;
   timestamp: string;
@@ -364,7 +403,7 @@ export interface Notification {
 export interface DashboardWidget {
   id: string;
   title: string;
-  type: 'chart' | 'stat' | 'table' | 'progress';
+  type: "chart" | "stat" | "table" | "progress";
   data: any;
   config: Record<string, any>;
   position: { x: number; y: number; w: number; h: number };
@@ -374,10 +413,10 @@ export interface DashboardWidget {
 export interface Report {
   id: string;
   name: string;
-  type: 'project' | 'estimation' | 'financial';
+  type: "project" | "estimation" | "financial";
   parameters: Record<string, any>;
   schedule?: {
-    frequency: 'daily' | 'weekly' | 'monthly';
+    frequency: "daily" | "weekly" | "monthly";
     recipients: string[];
   };
   lastGenerated?: string;
@@ -385,7 +424,7 @@ export interface Report {
 
 // Export Configuration
 export interface ExportConfig {
-  format: 'pdf' | 'excel' | 'csv';
+  format: "pdf" | "excel" | "csv";
   includeCharts: boolean;
   includeDetails: boolean;
   template?: string;
@@ -415,7 +454,7 @@ export interface Permission {
   name: string;
   description: string;
   resource: string;
-  action: 'create' | 'read' | 'update' | 'delete';
+  action: "create" | "read" | "update" | "delete";
 }
 
 export interface Role {
@@ -429,7 +468,7 @@ export interface Role {
 export interface Integration {
   id: string;
   name: string;
-  type: 'accounting' | 'crm' | 'storage' | 'communication';
+  type: "accounting" | "crm" | "storage" | "communication";
   config: Record<string, any>;
   enabled: boolean;
   lastSync?: string;
@@ -437,15 +476,15 @@ export interface Integration {
 
 // Backup Types
 export interface BackupConfig {
-  frequency: 'daily' | 'weekly' | 'monthly';
+  frequency: "daily" | "weekly" | "monthly";
   retention: number;
-  location: 'local' | 'cloud';
+  location: "local" | "cloud";
   encryption: boolean;
 }
 
 // System Health Types
 export interface SystemHealth {
-  status: 'healthy' | 'warning' | 'critical';
+  status: "healthy" | "warning" | "critical";
   checks: {
     database: boolean;
     storage: boolean;

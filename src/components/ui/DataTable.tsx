@@ -1,20 +1,635 @@
-// components/ui/DataTable.tsx
-import React, { useState, useMemo } from 'react';
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  Search, 
-  Filter,
+import React, { useMemo, useState } from "react";
+import {
+  DataGrid,
+  GridColDef,
+  GridRenderCellParams,
+  GridRowParams,
+  GridSlotsComponent,
+  GridSortModel,
+  GridFilterModel,
+  GridPaginationModel,
+  GridToolbarProps,
+  GridLogicOperator,
+} from "@mui/x-data-grid";
+import {
+  Box,
+  Paper,
+  Typography,
+  Toolbar,
+  InputBase,
+  Button,
+  IconButton,
+  Select,
+  MenuItem,
+  FormControl,
+  styled,
+  createTheme,
+  ThemeProvider,
+  useTheme,
+  alpha,
+} from "@mui/material";
+import {
+  Search,
   ChevronLeft,
   ChevronRight,
-  Edit,
-  Trash2
-} from 'lucide-react';
-import { Button } from './Button';
-import { Input } from './Input';
-import { Select } from './Select';
-import { cn } from '@/lib/utils';
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
+// Create a custom theme for the DataGrid compatible with MUI v7
+const createDataGridTheme = (baseTheme: any) =>
+  createTheme({
+    ...baseTheme,
+    palette: {
+      ...baseTheme.palette,
+      mode: "light",
+      primary: {
+        main: "#2563eb", // Blue-600
+      },
+      background: {
+        default: "#ffffff",
+        paper: "#ffffff",
+      },
+      text: {
+        primary: "#111827", // Gray-900
+        secondary: "#6b7280", // Gray-500
+      },
+    },
+    components: {
+      ...baseTheme.components,
+      MuiDataGrid: {
+        styleOverrides: {
+          root: {
+            border: "1px solid #e5e7eb", // Gray-200
+            borderRadius: "8px",
+            fontFamily: "inherit",
+            "& .MuiDataGrid-cell": {
+              borderBottom: "1px solid #f3f4f6", // Gray-100
+              fontSize: "0.875rem", // text-sm
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              lineHeight: "1.5",
+              whiteSpace: "normal",
+              wordWrap: "break-word",
+              overflowWrap: "break-word",
+            },
+            "& .MuiDataGrid-columnHeaders": {
+              backgroundColor: "#f9fafb", // Gray-50
+              borderBottom: "1px solid #e5e7eb", // Gray-200
+              fontSize: "0.75rem", // text-xs
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              color: "#374151", // Gray-700
+            },
+            "& .MuiDataGrid-columnHeader": {
+              padding: "12px 16px",
+              "&:focus": {
+                outline: "none",
+              },
+              "&:focus-within": {
+                outline: "none",
+              },
+            },
+            "& .MuiDataGrid-columnHeaderTitle": {
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            },
+            "& .MuiDataGrid-row": {
+              minHeight: "60px !important",
+              "&:hover": {
+                backgroundColor: "#f9fafb", // Gray-50
+              },
+              "&.Mui-selected": {
+                backgroundColor: "transparent",
+                "&:hover": {
+                  backgroundColor: "#f9fafb",
+                },
+              },
+            },
+            "& .MuiDataGrid-footerContainer": {
+              display: "none", // Hide default footer to use custom pagination
+            },
+            "& .MuiDataGrid-toolbarContainer": {
+              padding: "16px",
+              borderBottom: "1px solid #e5e7eb", // Gray-200
+              backgroundColor: "#ffffff",
+            },
+            "& .MuiDataGrid-overlay": {
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+            },
+            "& .MuiDataGrid-virtualScroller": {
+              backgroundColor: "#ffffff",
+            },
+            "& .MuiDataGrid-main": {
+              backgroundColor: "#ffffff",
+            },
+          },
+        },
+      },
+    },
+  });
+
+// Styled components
+const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
+  "& .MuiDataGrid-cell--textLeft": {
+    justifyContent: "flex-start",
+    textAlign: "left",
+  },
+  "& .MuiDataGrid-cell--textCenter": {
+    justifyContent: "center",
+    textAlign: "center",
+  },
+  "& .MuiDataGrid-cell--textRight": {
+    justifyContent: "flex-end",
+    textAlign: "right",
+  },
+  "& .MuiDataGrid-columnHeader--alignLeft .MuiDataGrid-columnHeaderTitleContainer":
+    {
+      justifyContent: "flex-start",
+    },
+  "& .MuiDataGrid-columnHeader--alignCenter .MuiDataGrid-columnHeaderTitleContainer":
+    {
+      justifyContent: "center",
+    },
+  "& .MuiDataGrid-columnHeader--alignRight .MuiDataGrid-columnHeaderTitleContainer":
+    {
+      justifyContent: "flex-end",
+    },
+}));
+
+const EmptyStateContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing(6),
+  color: theme.palette.text.secondary,
+  height: "300px",
+}));
+
+const EmptyStateIcon = styled(Box)(({ theme }) => ({
+  width: 64,
+  height: 64,
+  marginBottom: theme.spacing(2),
+  borderRadius: "50%",
+  backgroundColor: "#f3f4f6", // Gray-100
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+}));
+
+// Custom Pagination Component
+const PaginationContainer = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "12px 16px",
+  borderTop: "1px solid #e5e7eb",
+  backgroundColor: "#ffffff",
+  minHeight: "64px",
+  flexWrap: "wrap",
+  gap: theme.spacing(2),
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: theme.spacing(1),
+  },
+}));
+
+const PaginationInfo = styled(Typography)(({ theme }) => ({
+  fontSize: "0.875rem",
+  color: "#6b7280",
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  [theme.breakpoints.down("sm")]: {
+    justifyContent: "center",
+  },
+}));
+
+const PaginationControls = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+  [theme.breakpoints.down("sm")]: {
+    justifyContent: "center",
+    flexWrap: "wrap",
+  },
+}));
+
+const PageButton = styled(Button)(({ theme }) => ({
+  minWidth: "36px",
+  height: "36px",
+  padding: 0,
+  fontSize: "0.875rem",
+  fontWeight: 500,
+  borderRadius: "6px",
+  border: "1px solid #d1d5db",
+  backgroundColor: "#ffffff",
+  color: "#374151",
+  "&:hover": {
+    backgroundColor: "#f9fafb",
+    borderColor: "#9ca3af",
+  },
+  "&.active": {
+    backgroundColor: "#2563eb",
+    borderColor: "#2563eb",
+    color: "#ffffff",
+    "&:hover": {
+      backgroundColor: "#1d4ed8",
+    },
+  },
+  "&:disabled": {
+    backgroundColor: "#f9fafb",
+    borderColor: "#e5e7eb",
+    color: "#9ca3af",
+    cursor: "not-allowed",
+  },
+}));
+
+const PageSizeSelector = styled(FormControl)(({ theme }) => ({
+  minWidth: "80px",
+  "& .MuiSelect-select": {
+    fontSize: "0.875rem",
+    padding: "8px 12px",
+    paddingRight: "32px !important",
+  },
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "6px",
+    "& fieldset": {
+      borderColor: "#d1d5db",
+    },
+    "&:hover fieldset": {
+      borderColor: "#9ca3af",
+    },
+    "&.Mui-focused fieldset": {
+      borderColor: "#2563eb",
+    },
+  },
+}));
+
+const SearchContainer = styled(Box)(({ theme }) => ({
+  position: "relative",
+  borderRadius: "6px",
+  backgroundColor: "#ffffff",
+  border: "1px solid #d1d5db",
+  "&:hover": {
+    borderColor: "#9ca3af",
+  },
+  "&:focus-within": {
+    borderColor: "#2563eb",
+    boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.1)",
+  },
+  marginLeft: 0,
+  width: "100%",
+  maxWidth: "300px",
+}));
+
+const SearchIconWrapper = styled("div")(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: "100%",
+  position: "absolute",
+  pointerEvents: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#9ca3af",
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: "inherit",
+  width: "100%",
+  "& .MuiInputBase-input": {
+    padding: theme.spacing(1, 1, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+    fontSize: "0.875rem",
+    width: "100%",
+    "&::placeholder": {
+      color: "#9ca3af",
+      opacity: 1,
+    },
+  },
+}));
+
+interface CustomPaginationProps {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  totalRows: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  pageSizeOptions: number[];
+}
+
+function CustomPagination({
+  currentPage,
+  totalPages,
+  pageSize,
+  totalRows,
+  onPageChange,
+  onPageSizeChange,
+  pageSizeOptions,
+}: CustomPaginationProps) {
+  const startRow = currentPage * pageSize + 1;
+  const endRow = Math.min((currentPage + 1) * pageSize, totalRows);
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is less than max visible
+      for (let i = 0; i < totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Complex pagination logic
+      if (currentPage < 2) {
+        // Near the beginning
+        pages.push(0, 1, 2, "...", totalPages - 1);
+      } else if (currentPage > totalPages - 3) {
+        // Near the end
+        pages.push(0, "...", totalPages - 3, totalPages - 2, totalPages - 1);
+      } else {
+        // In the middle
+        pages.push(
+          0,
+          "...",
+          currentPage - 1,
+          currentPage,
+          currentPage + 1,
+          "...",
+          totalPages - 1
+        );
+      }
+    }
+
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
+
+  return (
+    <PaginationContainer>
+      {/* Left side - Row info and page size selector */}
+      <Box
+        sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}
+      >
+        <PaginationInfo>
+          Showing <strong>{startRow}</strong> to <strong>{endRow}</strong> of{" "}
+          <strong>{totalRows}</strong> results
+        </PaginationInfo>
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontSize: "0.875rem", color: "#6b7280" }}
+          >
+            Show:
+          </Typography>
+          <PageSizeSelector size="small">
+            <Select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              variant="outlined"
+            >
+              {pageSizeOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </PageSizeSelector>
+        </Box>
+      </Box>
+
+      {/* Right side - Navigation controls */}
+      <PaginationControls>
+        {/* First page button */}
+        <IconButton
+          onClick={() => onPageChange(0)}
+          disabled={currentPage === 0}
+          size="small"
+          sx={{
+            width: "36px",
+            height: "36px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            backgroundColor: "#ffffff",
+            "&:hover": {
+              backgroundColor: "#f9fafb",
+            },
+            "&:disabled": {
+              backgroundColor: "#f9fafb",
+              borderColor: "#e5e7eb",
+              color: "#9ca3af",
+            },
+          }}
+        >
+          <ChevronsLeft size={16} />
+        </IconButton>
+
+        {/* Previous page button */}
+        <IconButton
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 0}
+          size="small"
+          sx={{
+            width: "36px",
+            height: "36px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            backgroundColor: "#ffffff",
+            "&:hover": {
+              backgroundColor: "#f9fafb",
+            },
+            "&:disabled": {
+              backgroundColor: "#f9fafb",
+              borderColor: "#e5e7eb",
+              color: "#9ca3af",
+            },
+          }}
+        >
+          <ChevronLeft size={16} />
+        </IconButton>
+
+        {/* Page number buttons */}
+        {pageNumbers.map((page, index) => (
+          <React.Fragment key={index}>
+            {page === "..." ? (
+              <Typography
+                variant="body2"
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  color: "#9ca3af",
+                  fontSize: "0.875rem",
+                  display: { xs: "none", sm: "block" },
+                }}
+              >
+                ...
+              </Typography>
+            ) : (
+              <PageButton
+                onClick={() => onPageChange(page as number)}
+                className={currentPage === page ? "active" : ""}
+                sx={{ display: { xs: "none", sm: "flex" } }}
+              >
+                {(page as number) + 1}
+              </PageButton>
+            )}
+          </React.Fragment>
+        ))}
+
+        {/* Mobile page indicator */}
+        <Box
+          sx={{
+            display: { xs: "flex", sm: "none" },
+            alignItems: "center",
+            px: 2,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{ fontSize: "0.875rem", color: "#6b7280" }}
+          >
+            Page {currentPage + 1} of {totalPages}
+          </Typography>
+        </Box>
+
+        {/* Next page button */}
+        <IconButton
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages - 1}
+          size="small"
+          sx={{
+            width: "36px",
+            height: "36px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            backgroundColor: "#ffffff",
+            "&:hover": {
+              backgroundColor: "#f9fafb",
+            },
+            "&:disabled": {
+              backgroundColor: "#f9fafb",
+              borderColor: "#e5e7eb",
+              color: "#9ca3af",
+            },
+          }}
+        >
+          <ChevronRight size={16} />
+        </IconButton>
+
+        {/* Last page button */}
+        <IconButton
+          onClick={() => onPageChange(totalPages - 1)}
+          disabled={currentPage >= totalPages - 1}
+          size="small"
+          sx={{
+            width: "36px",
+            height: "36px",
+            border: "1px solid #d1d5db",
+            borderRadius: "6px",
+            backgroundColor: "#ffffff",
+            "&:hover": {
+              backgroundColor: "#f9fafb",
+            },
+            "&:disabled": {
+              backgroundColor: "#f9fafb",
+              borderColor: "#e5e7eb",
+              color: "#9ca3af",
+            },
+          }}
+        >
+          <ChevronsRight size={16} />
+        </IconButton>
+      </PaginationControls>
+    </PaginationContainer>
+  );
+}
+
+// Custom toolbar component using new Toolbar instead of deprecated GridToolbarContainer
+function CustomToolbarWithSearch({
+  searchText,
+  onSearchChange,
+}: {
+  searchText: string;
+  onSearchChange: (value: string) => void;
+}) {
+  return (
+    <Toolbar
+      sx={{
+        justifyContent: "space-between",
+        padding: "16px !important",
+        minHeight: "auto !important",
+      }}
+    >
+      <SearchContainer>
+        <SearchIconWrapper>
+          <Search size={16} />
+        </SearchIconWrapper>
+        <StyledInputBase
+          placeholder="Search..."
+          inputProps={{ "aria-label": "search" }}
+          value={searchText}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </SearchContainer>
+    </Toolbar>
+  );
+}
+
+// Custom empty state component
+function CustomNoRowsOverlay({ emptyMessage }: { emptyMessage: string }) {
+  return (
+    <EmptyStateContainer>
+      <EmptyStateIcon>
+        <Search size={32} color="#9ca3af" />
+      </EmptyStateIcon>
+      <Typography variant="body2" fontWeight="medium" color="text.secondary">
+        {emptyMessage}
+      </Typography>
+    </EmptyStateContainer>
+  );
+}
+
+// Custom loading overlay
+function CustomLoadingOverlay() {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "300px",
+      }}
+    >
+      <Box
+        sx={{
+          width: 32,
+          height: 32,
+          border: "2px solid #e5e7eb",
+          borderTop: "2px solid #2563eb",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+          "@keyframes spin": {
+            "0%": { transform: "rotate(0deg)" },
+            "100%": { transform: "rotate(360deg)" },
+          },
+        }}
+      />
+    </Box>
+  );
+}
+
+// Updated interface definitions to match the template components better
 export interface TableColumn<T> {
   id: keyof T | string;
   header: string;
@@ -23,7 +638,7 @@ export interface TableColumn<T> {
   filterable?: boolean;
   render?: (value: any, row: T) => React.ReactNode;
   width?: string;
-  align?: 'left' | 'center' | 'right'; // Added align option
+  align?: "left" | "center" | "right";
 }
 
 export interface TableProps<T> {
@@ -39,21 +654,12 @@ export interface TableProps<T> {
   loading?: boolean;
   emptyMessage?: string;
   className?: string;
-  defaultAlign?: 'left' | 'center' | 'right'; // Added default alignment option
-}
-
-interface SortConfig {
-  key: string;
-  direction: 'asc' | 'desc';
-}
-
-interface FilterConfig {
-  [key: string]: string;
+  showActions?: boolean; // Add this to control actions column visibility
 }
 
 function DataTable<T extends Record<string, any>>({
-  data,
-  columns,
+  data = [], // Add default empty array
+  columns = [], // Add default empty array
   searchable = true,
   sortable = true,
   filterable = false,
@@ -64,310 +670,285 @@ function DataTable<T extends Record<string, any>>({
   loading = false,
   emptyMessage = "No data available",
   className,
-  defaultAlign = 'left', // Default to center alignment
+  showActions = true, // Default to true for backward compatibility
 }: TableProps<T>) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [filters, setFilters] = useState<FilterConfig>({});
-  const [currentPage, setCurrentPage] = useState(1);
+  const baseTheme = useTheme();
+  const dataGridTheme = useMemo(
+    () => createDataGridTheme(baseTheme),
+    [baseTheme]
+  );
 
-  // Get value from row using accessor
-  const getValue = (row: T, accessor: keyof T | ((row: T) => any)) => {
-    if (typeof accessor === 'function') {
-      return accessor(row);
-    }
-    return row[accessor];
-  };
+  // Search state
+  const [searchText, setSearchText] = useState("");
 
-  // Filter data based on search and filters
-  const filteredData = useMemo(() => {
-    let filtered = [...data];
+  // Convert data to include unique IDs for MUI DataGrid
+  const rows = useMemo(() => {
+    let processedData = data.map((row, index) => ({
+      ...row,
+      _id: row.id || `row-${index}`, // Use existing ID or generate one
+    }));
 
     // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(row =>
-        columns.some(column => {
-          const value = getValue(row, column.accessor);
-          return value?.toString().toLowerCase().includes(searchTerm.toLowerCase());
+    if (searchText) {
+      processedData = processedData.filter((row) =>
+        columns.some((column) => {
+          const value =
+            typeof column.accessor === "function"
+              ? column.accessor(row)
+              : row[column.accessor];
+          return value
+            ?.toString()
+            .toLowerCase()
+            .includes(searchText.toLowerCase());
         })
       );
     }
 
-    // Apply column filters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        filtered = filtered.filter(row => {
-          const column = columns.find(col => col.id === key);
-          if (column) {
-            const cellValue = getValue(row, column.accessor);
-            return cellValue?.toString().toLowerCase().includes(value.toLowerCase());
+    return processedData;
+  }, [data, searchText, columns]);
+
+  // Pagination model state
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: pageSize,
+  });
+
+  // Calculate pagination values
+  const totalPages = Math.ceil((rows?.length || 0) / paginationModel.pageSize);
+  const paginatedRows = useMemo(() => {
+    if (!pagination || !rows || !Array.isArray(rows)) return rows || [];
+    const start = paginationModel.page * paginationModel.pageSize;
+    const end = start + paginationModel.pageSize;
+    return rows.slice(start, end);
+  }, [rows, paginationModel, pagination]);
+
+  // Handle pagination changes
+  const handlePageChange = (newPage: number) => {
+    setPaginationModel((prev) => ({ ...prev, page: newPage }));
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPaginationModel({ page: 0, pageSize: newPageSize });
+  };
+
+  // Convert columns to MUI DataGrid format
+  const muiColumns = useMemo((): GridColDef[] => {
+    const convertedColumns: GridColDef[] = columns.map((column) => {
+      const muiColumn: GridColDef = {
+        field: column.id as string,
+        headerName: column.header,
+        sortable: column.sortable !== false && sortable,
+        filterable: column.filterable !== false && filterable,
+        headerAlign: column.align || "center",
+        align: column.align || "center",
+        flex: column.width ? 0 : 1,
+        width: column.width ? parseInt(column.width) : undefined,
+        minWidth: 120,
+        hideable: false,
+        disableColumnMenu: !filterable,
+      };
+
+      // Handle custom accessor or render function
+      if (typeof column.accessor === "function" || column.render) {
+        muiColumn.renderCell = (params: GridRenderCellParams) => {
+          const value =
+            typeof column.accessor === "function"
+              ? column.accessor(params.row)
+              : params.row[column.accessor];
+
+          if (column.render) {
+            return (
+              <Box
+                sx={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent:
+                    column.align === "left"
+                      ? "flex-start"
+                      : column.align === "right"
+                      ? "flex-end"
+                      : "center",
+                  textAlign: column.align || "center",
+                  padding: "8px 0",
+                  minHeight: "60px",
+                }}
+              >
+                {column.render(value, params.row)}
+              </Box>
+            );
           }
-          return true;
-        });
-      }
-    });
 
-    return filtered;
-  }, [data, searchTerm, filters, columns]);
+          return (
+            <Box
+              sx={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent:
+                  column.align === "left"
+                    ? "flex-start"
+                    : column.align === "right"
+                    ? "flex-end"
+                    : "center",
+                textAlign: column.align || "center",
+                padding: "8px 0",
+                minHeight: "60px",
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {value}
+            </Box>
+          );
+        };
 
-  // Sort data
-  const sortedData = useMemo(() => {
-    if (!sortConfig) return filteredData;
-
-    return [...filteredData].sort((a, b) => {
-      const column = columns.find(col => col.id === sortConfig.key);
-      if (!column) return 0;
-
-      const aValue = getValue(a, column.accessor);
-      const bValue = getValue(b, column.accessor);
-
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      let comparison = 0;
-      if (aValue > bValue) comparison = 1;
-      if (aValue < bValue) comparison = -1;
-
-      return sortConfig.direction === 'desc' ? comparison * -1 : comparison;
-    });
-  }, [filteredData, sortConfig, columns]);
-
-  // Paginate data
-  const paginatedData = useMemo(() => {
-    if (!pagination) return sortedData;
-
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedData.slice(startIndex, startIndex + pageSize);
-  }, [sortedData, currentPage, pageSize, pagination]);
-
-  const totalPages = Math.ceil(sortedData.length / pageSize);
-
-  // Handle sorting
-  const handleSort = (columnId: string) => {
-    if (!sortable) return;
-
-    setSortConfig(prevConfig => {
-      if (prevConfig?.key === columnId) {
-        if (prevConfig.direction === 'desc') {
-          return null; // Remove sort
+        // For sorting with custom accessor
+        if (typeof column.accessor === "function") {
+          muiColumn.valueGetter = (value: any, row: any) => {
+            return (column.accessor as Function)(row);
+          };
         }
-        return { key: columnId, direction: 'desc' };
       }
-      return { key: columnId, direction: 'asc' };
+
+      return muiColumn;
     });
+
+    // Add actions column if provided and showActions is true
+    if (actions && showActions) {
+      convertedColumns.push({
+        field: "actions",
+        headerName: "Actions",
+        sortable: false,
+        filterable: false,
+        headerAlign: "center",
+        align: "center",
+        width: 120,
+        minWidth: 120,
+        flex: 0,
+        hideable: false,
+        disableColumnMenu: true,
+        renderCell: (params: GridRenderCellParams) => (
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            sx={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "60px",
+            }}
+          >
+            {actions(params.row)}
+          </Box>
+        ),
+      });
+    }
+
+    return convertedColumns;
+  }, [columns, actions, sortable, filterable, showActions]);
+
+  // Handle row click
+  const handleRowClick = (params: GridRowParams) => {
+    if (onRowClick) {
+      onRowClick(params.row);
+    }
   };
 
-  // Handle filter change
-  const handleFilterChange = (columnId: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [columnId]: value,
-    }));
-    setCurrentPage(1); // Reset to first page when filtering
+  // Create slots object with proper types
+  const slots: Partial<GridSlotsComponent> = {
+    noRowsOverlay: () => <CustomNoRowsOverlay emptyMessage={emptyMessage} />,
+    loadingOverlay: CustomLoadingOverlay,
   };
 
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
-
-
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600" />
-      </div>
+  if (searchable) {
+    slots.toolbar = () => (
+      <CustomToolbarWithSearch
+        searchText={searchText}
+        onSearchChange={setSearchText}
+      />
     );
   }
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      {/* Search and Controls - Fixed at top */}
-      {(searchable || filterable) && (
-        <div className="flex-shrink-0 mb-4">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            {searchable && (
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+    <ThemeProvider theme={dataGridTheme}>
+      <Box className={cn("h-full flex flex-col", className)}>
+        {/* Main Table Container */}
+        <Paper
+          elevation={0}
+          sx={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            overflow: "hidden",
+            backgroundColor: "#ffffff",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <StyledDataGrid
+            rows={paginatedRows}
+            columns={muiColumns}
+            getRowId={(row) => row._id}
+            loading={loading}
+            onRowClick={onRowClick ? handleRowClick : undefined}
+            slots={slots}
+            disableRowSelectionOnClick
+            disableColumnSelector
+            disableDensitySelector
+            disableColumnFilter={!filterable}
+            getRowHeight={() => "auto"}
+            hideFooter={true} // Hide default footer completely
+            sx={{
+              flex: 1,
+              border: "none",
+              fontFamily: "inherit",
+              "& .MuiDataGrid-row": {
+                cursor: onRowClick ? "pointer" : "default",
+                "&:last-child .MuiDataGrid-cell": {
+                  borderBottom: "none",
+                },
+              },
+              "& .MuiDataGrid-cell": {
+                display: "flex",
+                alignItems: "center",
+                lineHeight: "1.5",
+                whiteSpace: "normal",
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+                padding: "12px 16px",
+              },
+              "& .MuiDataGrid-cell:focus": {
+                outline: "none",
+              },
+              "& .MuiDataGrid-cell:focus-within": {
+                outline: "none",
+              },
+              "& .MuiDataGrid-columnHeader:focus": {
+                outline: "none",
+              },
+              "& .MuiDataGrid-columnHeader:focus-within": {
+                outline: "none",
+              },
+            }}
+          />
 
-      {/* Table Container - Scrollable */}
-      <div className="flex-1 overflow-y-scroll border border-gray-200 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0 z-10">
-              <tr>
-                {columns.map((column) => (
-                  <th
-                    key={column.id as string}
-                    className={cn(
-                      "px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50  text-left",
-                      
-                      column.sortable && sortable && "cursor-pointer select-none hover:bg-gray-100",
-                      column.width && `w-${column.width}`
-                    )}
-                    onClick={() => column.sortable && handleSort(column.id as string)}
-                  >
-                    <div className="text-left flex items-center justify-between">
-                      <span>{column.header}</span>
-                      {column.sortable && sortable && (
-                        <div className="flex flex-col">
-                          <ChevronUp 
-                            className={cn(
-                              "h-3 w-3",
-                              sortConfig?.key === column.id && sortConfig.direction === 'asc'
-                                ? "text-blue-600"
-                                : "text-gray-400"
-                            )}
-                          />
-                          <ChevronDown 
-                            className={cn(
-                              "h-3 w-3 -mt-1",
-                              sortConfig?.key === column.id && sortConfig.direction === 'desc'
-                                ? "text-blue-600"
-                                : "text-gray-400"
-                            )}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    {/* Column Filter */}
-                    {column.filterable && filterable && (
-                      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                        <Input
-                          placeholder={`Filter ${column.header.toLowerCase()}...`}
-                          value={filters[column.id as string] || ''}
-                          onChange={(e) => handleFilterChange(column.id as string, e.target.value)}
-                          className="text-xs h-8"
-                        />
-                      </div>
-                    )}
-                  </th>
-                ))}
-                {actions && (
-                  <th className=" py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
-                    Actions
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedData.length === 0 ? (
-                <tr>
-                  <td 
-                    colSpan={columns.length + (actions ? 1 : 0)} 
-                    className="px-6 py-12 text-center text-gray-500"
-                  >
-                    {emptyMessage}
-                  </td>
-                </tr>
-              ) : (
-                paginatedData.map((row, index) => (
-                  <tr
-                    key={index}
-                    className={cn(
-                      "hover:bg-gray-50",
-                      onRowClick && "cursor-pointer"
-                    )}
-                    onClick={() => onRowClick?.(row)}
-                  >
-                    {columns.map((column) => {
-                      const value = getValue(row, column.accessor);
-                      return (
-                        <td 
-                          key={column.id as string} 
-                          className={cn(
-                            "px-6 py-4 whitespace-nowrap text-sm text-gray-900",
-                          )}
-                        >
-                          {column.render ? column.render(value, row) : value}
-                        </td>
-                      );
-                    })}
-                    {actions && (
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          {actions(row)}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-      </div>
-
-      {/* Pagination - Fixed at bottom */}
-      {pagination && totalPages > 1 && (
-        <div className="flex-shrink-0 mt-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length} results
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previously
-              </Button>
-              
-              {/* Page Numbers */}
-              <div className="flex space-x-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let page;
-                  if (totalPages <= 5) {
-                    page = i + 1;
-                  } else if (currentPage <= 3) {
-                    page = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
-                  } else {
-                    page = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(page)}
-                      className="w-8 h-8 p-0"
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+          {/* Custom Pagination */}
+          {pagination && totalPages > 1 && (
+            <CustomPagination
+              currentPage={paginationModel.page}
+              totalPages={totalPages}
+              pageSize={paginationModel.pageSize}
+              totalRows={rows.length}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              pageSizeOptions={[5, 10, 25, 50, 100]}
+            />
+          )}
+        </Paper>
+      </Box>
+    </ThemeProvider>
   );
 }
 

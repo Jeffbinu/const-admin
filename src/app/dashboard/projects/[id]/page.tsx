@@ -828,7 +828,7 @@ export default function ProjectDetailsPage() {
           title="Edit Item"
           className="hover:bg-blue-50 h-8 w-8"
         >
-          <Edit className="h-4 w-4 text-blue-600" />
+          <Edit className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"

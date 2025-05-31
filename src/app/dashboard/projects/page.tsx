@@ -142,7 +142,7 @@ export default function ProjectsPage() {
         title="Edit Project"
         className="hover:bg-green-50 h-8 w-8"
       >
-        <Edit className="h-4 w-4 text-green-600" />
+        <Edit className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
