@@ -129,7 +129,7 @@ const TemplateViewModal: React.FC<TemplateViewModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Template: ${template.name}`}
+      title={`Preview Estimation `}
       size="2xl"
       custom_class="h-[95vh]"
     >
@@ -138,27 +138,27 @@ const TemplateViewModal: React.FC<TemplateViewModalProps> = ({
         <div className="flex-1 overflow-auto">
           <div ref={tableRef} className="bg-white p-6 min-h-full">
             {/* Table Header */}
-            <div className="border-2">
+            <div className="border-2 border-b-none">
               <div className="bg-white text-center py-2 flex items-center justify-center">
-                <h2 className="text-xl font-bold text-red-600 flex items-center justify-center">
+                <h2 className="text-xl font-boldflex items-center justify-center">
                   {template.name}
                 </h2>
               </div>
-              <div className="grid grid-cols-2 border-t-2 border-green-600">
-                <div className="border-r border-green-600 p-2 text-center font-semibold">
+              <div className="grid grid-cols-2 border-t-2 border-black">
+                <div className="border-r border-black p-2 text-center font-semibold">
                   Client
                 </div>
                 <div className="p-2 text-center font-semibold">
                   {template.clientName}
                 </div>
               </div>
-              <div className="bg-yellow-300 text-center py-2 border-t-2 border-green-600">
+              <div className=" text-center py-2 border-t-2  border-black">
                 <h3 className="text-lg font-bold italic">ESTIMATED COST</h3>
               </div>
             </div>
 
             {/* Table Content */}
-            <div className="border-2 border-black">
+            <div className="border-2 border-t-0 border-black">
               {/* Table Headers */}
               <div className="grid grid-cols-12 bg-gray-100 border-b-2 border-black">
                 <div className="col-span-1 border-r border-black p-2 text-center font-bold">
