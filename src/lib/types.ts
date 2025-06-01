@@ -62,6 +62,8 @@ export interface EstimationTemplate {
   itemsCount: number;
   lastModified: string;
   items: EstimationTemplateItem[];
+  clientName?: string;
+  version?: number;
 }
 
 // New Project Estimation Types

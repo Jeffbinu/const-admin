@@ -42,6 +42,7 @@ import {
   Loader2,
 } from "lucide-react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import TemplateViewModal from "@/components/templates/TemplateViewModal";
 
 const ActionLoadingOverlay: React.FC<{
   isVisible: boolean;
@@ -171,6 +172,8 @@ export default function ProjectDetailsPage() {
   const [deletingEstimation, setDeletingEstimation] =
     useState<ProjectEstimation | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [viewingEstimation, setViewingEstimation] =
+    useState<ProjectEstimation | null>(null);
 
   // Action loading states
   const [actionLoading, setActionLoading] = useState({
@@ -928,6 +931,24 @@ export default function ProjectDetailsPage() {
     );
   };
 
+  const convertEstimationToTemplate = (
+    estimation: ProjectEstimation
+  ): EstimationTemplate => {
+    return {
+      id: estimation.id,
+      name: estimation.name,
+      clientName: clientFormData.clientName,
+      category: "Project Estimation",
+      itemsCount: estimation.items.length,
+      lastModified: estimation.updatedDate,
+      items: estimation.items.map((item) => ({
+        id: item.id,
+        lineItemId: item.lineItemId,
+        quantity: item.quantity,
+      })),
+    };
+  };
+
   const EstimationsTab = () => {
     const estimationItemColumns: TableColumn<ProjectEstimationItem>[] = [
       {
@@ -1122,10 +1143,7 @@ export default function ProjectDetailsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            setCurrentEstimation(estimation);
-                            setShowEstimationDetails(true);
-                          }}
+                          onClick={() => setViewingEstimation(estimation)}
                           className="text-xs"
                         >
                           <Eye className="h-3 w-3 mr-1" />
@@ -1152,76 +1170,10 @@ export default function ProjectDetailsPage() {
                   </div>
                 ))}
               </div>
+
             </div>
           )}
 
-          {/* Current Estimation Details */}
-          {currentEstimation && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-md font-semibold text-gray-900">
-                {currentEstimation.name}
-                </h4>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setShowEstimationDetails(!showEstimationDetails)
-                  }
-                >
-                  {showEstimationDetails ? "Hide Details" : "Show Details"}
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center mb-4">
-                <div>
-                  <p className="text-sm text-gray-600">Total Items</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {currentEstimation.items.length}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Materials Cost</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ₹
-                    {(currentEstimation.totalAmount * 0.7).toLocaleString(
-                      "en-IN"
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Labor Cost</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    ₹
-                    {(currentEstimation.totalAmount * 0.3).toLocaleString(
-                      "en-IN"
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Amount</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    ₹{currentEstimation.totalAmount.toLocaleString("en-IN")}
-                  </p>
-                </div>
-              </div>
-
-              {showEstimationDetails && (
-                <div className="mt-6">
-                  <DataTable
-                    data={currentEstimation.items}
-                    columns={estimationItemColumns}
-                    actions={renderEstimationItemActions}
-                    emptyMessage="No items in this estimation"
-                    searchable
-                    sortable
-                    pagination
-                    pageSize={10}
-                  />
-                </div>
-              )}
-            </div>
-          )}
 
           {projectEstimations.length === 0 && (
             <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -1372,6 +1324,7 @@ export default function ProjectDetailsPage() {
       id: "estimations",
       label: "Estimations",
       content: <EstimationsTab />,
+      badge: projectEstimations.length || 0,
     },
     {
       id: "agreements",
@@ -1558,20 +1511,6 @@ export default function ProjectDetailsPage() {
               }
               options={projectTypeOptions}
             />
-
-            <Input
-              label="Number of Floors *"
-              type="number"
-              value={projectFormData.numberOfFloors}
-              onChange={(e) =>
-                setProjectFormData((prev) => ({
-                  ...prev,
-                  numberOfFloors: e.target.value,
-                }))
-              }
-              min="1"
-              placeholder="Enter number of floors"
-            />
           </div>
         </div>
       </InlineEditForm>
@@ -1593,6 +1532,18 @@ export default function ProjectDetailsPage() {
         }
         confirmText="Delete Estimation"
         isLoading={isSavingInline}
+      />
+
+      {/* Reuse TemplateViewModal for Estimation Details */}
+      <TemplateViewModal
+        isOpen={!!viewingEstimation}
+        onClose={() => setViewingEstimation(null)}
+        template={
+          viewingEstimation
+            ? convertEstimationToTemplate(viewingEstimation)
+            : null
+        }
+        lineItems={lineItems}
       />
 
       {/* Status Change Confirmation Modal */}
