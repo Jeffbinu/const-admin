@@ -127,7 +127,7 @@ export default function ProjectForm({
   ];
 
   return (
-    <div className=" py-8 px-4 ">
+    <div className=" py-8 px-4 h-full overflow-y-auto">
       <div className="bg-white rounded-2xl border border-gray-200/60 shadow-xl shadow-blue-100/50 backdrop-blur-sm ">
         <form
           onSubmit={handleSubmit}

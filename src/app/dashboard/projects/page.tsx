@@ -199,7 +199,7 @@ export default function ProjectsPage() {
             : "Add New Project"
         }
         size="2xl"
-        custom_class="h-[90vh]"
+        custom_class="h-[90vh] "
       >
         <ProjectForm
           onSubmit={handleCreateProject}

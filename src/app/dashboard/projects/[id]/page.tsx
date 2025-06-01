@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
 import DataTable from "@/components/ui/DataTable";
@@ -37,7 +39,25 @@ import {
   X,
   Check,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+
+const ActionLoadingOverlay: React.FC<{
+  isVisible: boolean;
+  message: string;
+}> = ({ isVisible, message }) => {
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 flex items-center space-x-3 min-w-[200px]">
+        <LoadingSpinner size="md" />
+        <span className="text-gray-700 font-medium">{message}</span>
+      </div>
+    </div>
+  );
+};
 
 // Confirmation Modal Component
 const ConfirmationModal: React.FC<{
@@ -57,23 +77,26 @@ const ConfirmationModal: React.FC<{
   confirmText = "Confirm",
   isLoading = false,
 }) => (
-  <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-    <div className="space-y-4">
-      <div className="flex items-start space-x-3">
-        <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
-        <p className="text-gray-700">{message}</p>
-      </div>
-      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+  <Modal
+    isOpen={isOpen}
+    onClose={onClose}
+    title={title}
+    size="sm"
+    footer={
+      <div className="flex justify-end space-x-3">
         <Button variant="outline" onClick={onClose} disabled={isLoading}>
           Cancel
         </Button>
         <Button onClick={onConfirm} disabled={isLoading}>
-          {isLoading ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-white mr-2" />
-          ) : null}
+          {isLoading && <LoadingSpinner size="sm" />}
           {confirmText}
         </Button>
       </div>
+    }
+  >
+    <div className="flex items-start space-x-3">
+      <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
+      <p className="text-gray-700">{message}</p>
     </div>
   </Modal>
 );
@@ -87,24 +110,29 @@ const InlineEditForm: React.FC<{
   onSave: () => Promise<void>;
   isSaving?: boolean;
 }> = ({ isOpen, onClose, title, children, onSave, isSaving = false }) => (
-  <Modal isOpen={isOpen} onClose={onClose} title={title} size="md">
-    <div className="space-y-6">
-      {children}
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+  <Modal
+    isOpen={isOpen}
+    onClose={onClose}
+    title={title}
+    size="md"
+    footer={
+      <div className="flex justify-end space-x-3">
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
           <X className="h-4 w-4 mr-2" />
           Cancel
         </Button>
         <Button onClick={onSave} disabled={isSaving}>
           {isSaving ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-white mr-2" />
+            <LoadingSpinner size="sm" />
           ) : (
             <Save className="h-4 w-4 mr-2" />
           )}
           Save Changes
         </Button>
       </div>
-    </div>
+    }
+  >
+    {children}
   </Modal>
 );
 
@@ -140,6 +168,12 @@ export default function ProjectDetailsPage() {
     newStatus: Project["status"];
   } | null>(null);
 
+  // Action loading states
+  const [actionLoading, setActionLoading] = useState({
+    isVisible: false,
+    message: "",
+  });
+
   // Form data states
   const [clientFormData, setClientFormData] = useState({
     clientName: "",
@@ -150,7 +184,7 @@ export default function ProjectDetailsPage() {
   const [projectFormData, setProjectFormData] = useState({
     name: "",
     projectType: "",
-    numberOfFloors: 1,
+    numberOfFloors: "",
     projectDuration: 1,
     estimatedBudget: 0,
     projectAddress: "",
@@ -161,6 +195,34 @@ export default function ProjectDetailsPage() {
     useState<Project["status"]>("New");
 
   const projectId = params.id as string;
+
+  // Project type options
+  const projectTypeOptions = [
+    { value: "Residential", label: "Residential" },
+    { value: "Commercial", label: "Commercial" },
+    { value: "Industrial", label: "Industrial" },
+    { value: "Institutional", label: "Institutional" },
+    { value: "Interior Fit-out", label: "Interior Fit-out" },
+    { value: "Other", label: "Other" },
+  ];
+
+  // Status options
+  const statusOptions = [
+    { value: "New", label: "New" },
+    { value: "Under Construction", label: "Under Construction" },
+    { value: "Opportunity Lost", label: "Opportunity Lost" },
+    { value: "On Hold", label: "On Hold" },
+    { value: "Completed", label: "Completed" },
+  ];
+
+  // Helper function to show action loading
+  const showActionLoading = (message: string) => {
+    setActionLoading({ isVisible: true, message });
+  };
+
+  const hideActionLoading = () => {
+    setActionLoading({ isVisible: false, message: "" });
+  };
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -178,7 +240,7 @@ export default function ProjectDetailsPage() {
         setProjectFormData({
           name: projectData.name,
           projectType: projectData.projectType,
-          numberOfFloors: projectData.numberOfFloors,
+          numberOfFloors: projectData.numberOfFloors.toString(),
           projectDuration: projectData.projectDuration,
           estimatedBudget: projectData.estimatedBudget,
           projectAddress: projectData.projectAddress || "",
@@ -240,6 +302,7 @@ export default function ProjectDetailsPage() {
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 
+      // Update local state immediately
       const updatedProject = { ...project, timeline: updatedTimeline };
       setProject(updatedProject);
 
@@ -252,22 +315,23 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  // Handle client information save
   const handleSaveClientInfo = async () => {
     if (!project) return;
 
     setIsSavingInline(true);
+    showActionLoading("Updating client information...");
+
     try {
       const updatedProject = await dataManager.updateProject(
         project.id,
         clientFormData
       );
-      if (updatedProject) {
-        setProject(updatedProject);
-        setIsEditingClient(false);
-        showToast("Client information updated successfully", "success");
 
-        // Add timeline event
+      if (updatedProject) {
+        // Update local state immediately
+        setProject((prev) => (prev ? { ...prev, ...clientFormData } : null));
+        setIsEditingClient(false);
+
         await addTimelineEvent({
           title: "Client Information Updated",
           description: "Client details have been modified",
@@ -279,6 +343,7 @@ export default function ProjectDetailsPage() {
       showToast("Failed to update client information", "error");
     } finally {
       setIsSavingInline(false);
+      hideActionLoading();
     }
   };
 
@@ -286,14 +351,24 @@ export default function ProjectDetailsPage() {
   const handleSaveProjectDetails = async () => {
     if (!project) return;
 
+    // Convert numberOfFloors string back to number for API
+    const dataToSave = {
+      ...projectFormData,
+      numberOfFloors: parseInt(projectFormData.numberOfFloors) || 1,
+    };
+
     setIsSavingInline(true);
+    showActionLoading("Updating project details...");
+
     try {
       const updatedProject = await dataManager.updateProject(
         project.id,
-        projectFormData
+        dataToSave
       );
+
       if (updatedProject) {
-        setProject(updatedProject);
+        // Update local state immediately
+        setProject((prev) => (prev ? { ...prev, ...dataToSave } : null));
         setIsEditingProject(false);
         showToast("Project details updated successfully", "success");
 
@@ -309,6 +384,7 @@ export default function ProjectDetailsPage() {
       showToast("Failed to update project details", "error");
     } finally {
       setIsSavingInline(false);
+      hideActionLoading();
     }
   };
 
@@ -316,6 +392,10 @@ export default function ProjectDetailsPage() {
   const handleStatusChange = (newStatus: Project["status"]) => {
     if (!project || newStatus === project.status) return;
 
+    // Update dropdown immediately for better UX
+    setStatusFormData(newStatus);
+
+    // Show confirmation for the actual save
     setPendingStatusChange({
       oldStatus: project.status,
       newStatus: newStatus,
@@ -327,14 +407,18 @@ export default function ProjectDetailsPage() {
     if (!project || !pendingStatusChange) return;
 
     setIsSavingInline(true);
+    showActionLoading("Updating project status...");
+
     try {
       const updatedProject = await dataManager.updateProject(project.id, {
         status: pendingStatusChange.newStatus,
       });
 
       if (updatedProject) {
-        setProject(updatedProject);
-        setStatusFormData(pendingStatusChange.newStatus);
+        // Update local state immediately
+        setProject((prev) =>
+          prev ? { ...prev, status: pendingStatusChange.newStatus } : null
+        );
         showToast(
           `Project status changed to ${pendingStatusChange.newStatus}`,
           "success"
@@ -350,8 +434,13 @@ export default function ProjectDetailsPage() {
       }
     } catch (error) {
       showToast("Failed to update project status", "error");
+      // Revert dropdown to original status on error
+      setStatusFormData(project.status);
+      // Revert local project state too
+      setProject((prev) => (prev ? { ...prev, status: project.status } : null));
     } finally {
       setIsSavingInline(false);
+      hideActionLoading();
       setShowStatusConfirmation(false);
       setPendingStatusChange(null);
     }
@@ -359,6 +448,8 @@ export default function ProjectDetailsPage() {
 
   const createEstimationFromTemplate = async (template: EstimationTemplate) => {
     if (!project) return;
+
+    showActionLoading("Creating estimation from template...");
 
     try {
       showToast("Creating estimation from template...", "info");
@@ -370,6 +461,7 @@ export default function ProjectDetailsPage() {
           `${template.name} - Version ${projectEstimations.length + 1}`
         );
 
+      // Update local state immediately
       setProjectEstimations((prev) => [...prev, newEstimation]);
       setCurrentEstimation(newEstimation);
       showToast("Estimation created successfully", "success");
@@ -385,6 +477,8 @@ export default function ProjectDetailsPage() {
       });
     } catch (error) {
       showToast("Failed to create estimation", "error");
+    } finally {
+      hideActionLoading();
     }
   };
 
@@ -394,6 +488,8 @@ export default function ProjectDetailsPage() {
   ) => {
     if (!currentEstimation) return;
 
+    showActionLoading("Updating estimation item...");
+
     try {
       const updatedEstimation = await dataManager.updateProjectEstimationItem(
         currentEstimation.id,
@@ -401,6 +497,7 @@ export default function ProjectDetailsPage() {
         updates
       );
 
+      // Update local state immediately
       setCurrentEstimation(updatedEstimation);
       setProjectEstimations((prev) =>
         prev.map((est) =>
@@ -410,11 +507,15 @@ export default function ProjectDetailsPage() {
       showToast("Estimation item updated successfully", "success");
     } catch (error) {
       showToast("Failed to update estimation item", "error");
+    } finally {
+      hideActionLoading();
     }
   };
 
   const deleteEstimationItem = async (itemId: string) => {
     if (!currentEstimation) return;
+
+    showActionLoading("Deleting estimation item...");
 
     try {
       const updatedEstimation = await dataManager.deleteProjectEstimationItem(
@@ -422,6 +523,7 @@ export default function ProjectDetailsPage() {
         itemId
       );
 
+      // Update local state immediately
       setCurrentEstimation(updatedEstimation);
       setProjectEstimations((prev) =>
         prev.map((est) =>
@@ -431,13 +533,18 @@ export default function ProjectDetailsPage() {
       showToast("Estimation item deleted successfully", "success");
     } catch (error) {
       showToast("Failed to delete estimation item", "error");
+    } finally {
+      hideActionLoading();
     }
   };
 
   const setActiveEstimation = async (estimationId: string) => {
+    showActionLoading("Setting active estimation...");
+
     try {
       await dataManager.setActiveProjectEstimation(projectId, estimationId);
 
+      // Update local state immediately
       setProjectEstimations((prev) =>
         prev.map((est) => ({ ...est, isActive: est.id === estimationId }))
       );
@@ -449,11 +556,15 @@ export default function ProjectDetailsPage() {
       showToast("Active estimation updated", "success");
     } catch (error) {
       showToast("Failed to update active estimation", "error");
+    } finally {
+      hideActionLoading();
     }
   };
 
   const generateAgreement = async () => {
     if (!project) return;
+
+    showActionLoading("Generating agreement document...");
 
     try {
       showToast("Generating agreement...", "info");
@@ -503,6 +614,8 @@ export default function ProjectDetailsPage() {
     } catch (error) {
       console.error("Failed to generate agreement:", error);
       showToast("Failed to generate agreement", "error");
+    } finally {
+      hideActionLoading();
     }
   };
 
@@ -544,8 +657,13 @@ export default function ProjectDetailsPage() {
               <button
                 onClick={() => setIsEditingClient(true)}
                 className="text-blue-600 cursor-pointer hover:text-blue-800 text-sm font-medium flex items-center transition-colors"
+                disabled={isSavingInline}
               >
-                <Edit className="h-3 w-3 mr-1" />
+                {isSavingInline ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <Edit className="h-3 w-3 mr-1" />
+                )}
                 Edit
               </button>
             </div>
@@ -555,7 +673,7 @@ export default function ProjectDetailsPage() {
                   Client Name
                 </label>
                 <p className="text-gray-900 font-medium">
-                  {project?.clientName}
+                  {clientFormData?.clientName}
                 </p>
               </div>
               <div>
@@ -563,16 +681,19 @@ export default function ProjectDetailsPage() {
                   <MapPin className="h-4 w-4 inline mr-1" />
                   Address
                 </label>
-                <p className="text-gray-900">{project?.clientAddress}</p>
+                <p className="text-gray-900">{clientFormData?.clientAddress}</p>
               </div>
-              {project?.phoneNumber && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Phone Number
-                  </label>
-                  <p className="text-gray-900">{project.phoneNumber}</p>
-                </div>
-              )}
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Phone Number
+                </label>
+
+                <p className="text-gray-900">
+                  {clientFormData?.phoneNumber
+                    ? clientFormData.phoneNumber
+                    : "-"}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -588,8 +709,13 @@ export default function ProjectDetailsPage() {
               <button
                 onClick={() => setIsEditingProject(true)}
                 className="text-blue-600 cursor-pointer hover:text-blue-800 text-sm font-medium flex items-center transition-colors"
+                disabled={isSavingInline}
               >
-                <Edit className="h-3 w-3 mr-1" />
+                {isSavingInline ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <Edit className="h-3 w-3 mr-1" />
+                )}
                 Edit
               </button>
             </div>
@@ -658,7 +784,9 @@ export default function ProjectDetailsPage() {
                 <label className="text-sm font-medium text-gray-500">
                   Project Type
                 </label>
-                <Badge variant="secondary">{project?.projectType}</Badge>
+                <Badge variant="secondary">
+                  {projectFormData?.projectType}
+                </Badge>
               </div>
 
               {/* Status with inline edit */}
@@ -670,22 +798,21 @@ export default function ProjectDetailsPage() {
                   <Badge
                     variant={getStatusBadgeVariant(project?.status || "New")}
                   >
-                    {project?.status}
+                    {statusFormData}
                   </Badge>
                   <select
                     value={statusFormData}
                     onChange={(e) =>
                       handleStatusChange(e.target.value as Project["status"])
                     }
-                    className="text-xs bg-transparent border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="text-xs bg-transparent border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[140px]"
+                    disabled={isSavingInline}
                   >
-                    <option value="New">New</option>
-                    <option value="Under Construction">
-                      Under Construction
-                    </option>
-                    <option value="Opportunity Lost">Opportunity Lost</option>
-                    <option value="On Hold">On Hold</option>
-                    <option value="Completed">Completed</option>
+                    {statusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -699,21 +826,8 @@ export default function ProjectDetailsPage() {
             Project Timeline
           </h3>
           <div className="space-y-4">
-            {/* Combine and sort all timeline events */}
-            {[
-              ...(project?.timeline || []),
-              ...projectEstimations.map((estimation) => ({
-                id: `timeline-estimation-${estimation.id}`,
-                title: `Estimation Created: ${estimation.name}`,
-                description: `Project valuation: ₹${estimation.totalAmount.toLocaleString(
-                  "en-IN"
-                )} • ${estimation.items.length} items${
-                  estimation.isActive ? " (Active)" : ""
-                }`,
-                date: estimation.createdDate,
-                status: "completed" as const,
-              })),
-            ]
+            {/* Display only actual timeline events, not dynamically generated ones */}
+            {(project?.timeline || [])
               .sort(
                 (a, b) =>
                   new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -746,6 +860,16 @@ export default function ProjectDetailsPage() {
                   </div>
                 </div>
               ))}
+
+            {/* Show message if no timeline events */}
+            {(!project?.timeline || project.timeline.length === 0) && (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-sm">No timeline events yet</p>
+                <p className="text-xs mt-1">
+                  Timeline events will appear as you make changes to the project
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1124,7 +1248,7 @@ export default function ProjectDetailsPage() {
     return (
       <DashboardLayout title="Loading...">
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600" />
+          <LoadingSpinner size="lg" />
         </div>
       </DashboardLayout>
     );
@@ -1178,6 +1302,12 @@ export default function ProjectDetailsPage() {
 
   return (
     <>
+      {/* Action Loading Overlay */}
+      <ActionLoadingOverlay
+        isVisible={actionLoading.isVisible}
+        message={actionLoading.message}
+      />
+
       <DashboardLayout
         title={project.name}
         subtitle={`${project.id} • Created ${new Date(
@@ -1212,7 +1342,7 @@ export default function ProjectDetailsPage() {
                   variant={getStatusBadgeVariant(project.status)}
                   className="text-sm px-3 py-1"
                 >
-                  {project.status}
+                  {statusFormData}
                 </Badge>
                 <span className="text-sm text-gray-500">
                   Last updated: {new Date().toLocaleDateString("en-GB")}
@@ -1222,11 +1352,11 @@ export default function ProjectDetailsPage() {
               <div className="flex items-center space-x-4 text-sm text-gray-600">
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-1" />
-                  {project.clientName}
+                  {clientFormData.clientName}
                 </div>
                 <div className="flex items-center">
                   <Building className="h-4 w-4 mr-1" />
-                  {project.projectType}
+                  {projectFormData.projectType}
                 </div>
               </div>
             </div>
@@ -1264,25 +1394,20 @@ export default function ProjectDetailsPage() {
         isSaving={isSavingInline}
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Client Name *
-            </label>
-            <input
-              type="text"
-              value={clientFormData.clientName}
-              onChange={(e) =>
-                setClientFormData((prev) => ({
-                  ...prev,
-                  clientName: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Input
+            label="Client Name *"
+            value={clientFormData.clientName}
+            onChange={(e) =>
+              setClientFormData((prev) => ({
+                ...prev,
+                clientName: e.target.value,
+              }))
+            }
+            required
+          />
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
               Client Address *
             </label>
             <textarea
@@ -1298,22 +1423,18 @@ export default function ProjectDetailsPage() {
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              value={clientFormData.phoneNumber}
-              onChange={(e) =>
-                setClientFormData((prev) => ({
-                  ...prev,
-                  phoneNumber: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+
+          <Input
+            label="Phone Number"
+            type="tel"
+            value={clientFormData.phoneNumber}
+            onChange={(e) =>
+              setClientFormData((prev) => ({
+                ...prev,
+                phoneNumber: e.target.value,
+              }))
+            }
+          />
         </div>
       </InlineEditForm>
 
@@ -1326,63 +1447,44 @@ export default function ProjectDetailsPage() {
         isSaving={isSavingInline}
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Project Name *
-            </label>
-            <input
-              type="text"
-              value={projectFormData.name}
+          <Input
+            label="Project Name *"
+            value={projectFormData.name}
+            onChange={(e) =>
+              setProjectFormData((prev) => ({
+                ...prev,
+                name: e.target.value,
+              }))
+            }
+            required
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              label="Project Type *"
+              value={projectFormData.projectType}
               onChange={(e) =>
                 setProjectFormData((prev) => ({
                   ...prev,
-                  name: e.target.value,
+                  projectType: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
+              options={projectTypeOptions}
             />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Project Type *
-              </label>
-              <select
-                value={projectFormData.projectType}
-                onChange={(e) =>
-                  setProjectFormData((prev) => ({
-                    ...prev,
-                    projectType: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="Residential">Residential</option>
-                <option value="Commercial">Commercial</option>
-                <option value="Industrial">Industrial</option>
-                <option value="Institutional">Institutional</option>
-                <option value="Interior Fit-out">Interior Fit-out</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Number of Floors *
-              </label>
-              <input
-                type="number"
-                value={projectFormData.numberOfFloors}
-                onChange={(e) =>
-                  setProjectFormData((prev) => ({
-                    ...prev,
-                    numberOfFloors: parseInt(e.target.value) || 1,
-                  }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="1"
-              />
-            </div>
+
+            <Input
+              label="Number of Floors *"
+              type="number"
+              value={projectFormData.numberOfFloors}
+              onChange={(e) =>
+                setProjectFormData((prev) => ({
+                  ...prev,
+                  numberOfFloors: e.target.value,
+                }))
+              }
+              min="1"
+              placeholder="Enter number of floors"
+            />
           </div>
         </div>
       </InlineEditForm>
@@ -1393,6 +1495,10 @@ export default function ProjectDetailsPage() {
         onClose={() => {
           setShowStatusConfirmation(false);
           setPendingStatusChange(null);
+          // Revert dropdown to original status if cancelled
+          if (project) {
+            setStatusFormData(project.status);
+          }
         }}
         onConfirm={confirmStatusChange}
         title="Confirm Status Change"
@@ -1411,6 +1517,26 @@ export default function ProjectDetailsPage() {
         onClose={() => setIsEstimationModalOpen(false)}
         title="Create Estimation from Template"
         size="lg"
+        showFullscreenToggle={true}
+        footer={
+          <div className="flex justify-end space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsEstimationModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                selectedTemplate &&
+                createEstimationFromTemplate(selectedTemplate)
+              }
+              disabled={!selectedTemplate}
+            >
+              Create Estimation
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-6">
           <p className="text-gray-600">
@@ -1418,7 +1544,7 @@ export default function ProjectDetailsPage() {
             for this project.
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-96 overflow-y-auto">
             {templates.map((template) => (
               <div
                 key={template.id}
@@ -1465,24 +1591,6 @@ export default function ProjectDetailsPage() {
               </p>
             </div>
           )}
-
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={() => setIsEstimationModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() =>
-                selectedTemplate &&
-                createEstimationFromTemplate(selectedTemplate)
-              }
-              disabled={!selectedTemplate}
-            >
-              Create Estimation
-            </Button>
-          </div>
         </div>
       </Modal>
 
@@ -1493,6 +1601,7 @@ export default function ProjectDetailsPage() {
           onClose={() => setEditingEstimation(null)}
           title="Edit Estimation Item"
           size="md"
+          showFullscreenToggle={true}
         >
           <EstimationItemForm
             item={editingEstimation}
@@ -1544,51 +1653,39 @@ const EstimationItemForm: React.FC<{
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Quantity
-          </label>
-          <input
-            type="number"
-            value={formData.quantity}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                quantity: parseFloat(e.target.value) || 0,
-              }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-            min="0"
-            step="0.01"
-          />
-        </div>
+        <Input
+          label="Quantity"
+          type="number"
+          value={formData.quantity.toString()}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              quantity: parseFloat(e.target.value) || 0,
+            }))
+          }
+          required
+          min="0"
+          step="0.01"
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Rate (₹)
-          </label>
-          <input
-            type="number"
-            value={formData.rate}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                rate: parseFloat(e.target.value) || 0,
-              }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-            min="0"
-            step="0.01"
-          />
-        </div>
+        <Input
+          label="Rate (₹)"
+          type="number"
+          value={formData.rate.toString()}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              rate: parseFloat(e.target.value) || 0,
+            }))
+          }
+          required
+          min="0"
+          step="0.01"
+        />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Notes
-        </label>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Notes</label>
         <textarea
           value={formData.notes}
           onChange={(e) =>
