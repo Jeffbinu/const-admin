@@ -168,6 +168,10 @@ export default function ProjectDetailsPage() {
     newStatus: Project["status"];
   } | null>(null);
 
+  const [deletingEstimation, setDeletingEstimation] =
+    useState<ProjectEstimation | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
   // Action loading states
   const [actionLoading, setActionLoading] = useState({
     isVisible: false,
@@ -270,6 +274,54 @@ export default function ProjectDetailsPage() {
       fetchProject();
     }
   }, [projectId, showToast, router]);
+
+  const deleteEstimation = async (estimationId: string) => {
+    if (!estimationId || projectEstimations.length <= 1) {
+      showToast("Cannot delete the last estimation", "error");
+      return;
+    }
+
+    const estimationToDelete = projectEstimations.find(
+      (est) => est.id === estimationId
+    );
+    if (!estimationToDelete) return;
+
+    showActionLoading("Deleting estimation...");
+
+    try {
+      await dataManager.deleteProjectEstimation(estimationId);
+
+      // Update local state
+      const updatedEstimations = projectEstimations.filter(
+        (est) => est.id !== estimationId
+      );
+      setProjectEstimations(updatedEstimations);
+
+      // If we deleted the current estimation, set a new current one
+      if (currentEstimation?.id === estimationId) {
+        const newCurrent =
+          updatedEstimations.find((est) => est.isActive) ||
+          updatedEstimations[0];
+        setCurrentEstimation(newCurrent || null);
+      }
+
+      showToast("Estimation deleted successfully", "success");
+
+      // Add timeline event
+      await addTimelineEvent({
+        title: `Estimation Deleted: ${estimationToDelete.name}`,
+        description: `Estimation with ${estimationToDelete.items.length} items has been removed`,
+        date: new Date().toISOString(),
+        status: "completed",
+      });
+    } catch (error) {
+      showToast("Failed to delete estimation", "error");
+    } finally {
+      hideActionLoading();
+      setShowDeleteConfirmation(false);
+      setDeletingEstimation(null);
+    }
+  };
 
   const getStatusBadgeVariant = (status: Project["status"]) => {
     switch (status) {
@@ -1001,28 +1053,40 @@ export default function ProjectDetailsPage() {
           {projectEstimations.length > 0 && (
             <div className="mb-6">
               <h4 className="text-md font-medium text-gray-900 mb-4">
-                Estimation Versions
+                Estimation Versions ({projectEstimations.length})
               </h4>
               <div className="space-y-3">
                 {projectEstimations.map((estimation) => (
                   <div
                     key={estimation.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg ${
+                    className={`flex items-center justify-between p-4 border rounded-lg transition-all ${
                       estimation.isActive
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 bg-white"
+                        ? "border-blue-500 bg-blue-50 shadow-sm"
+                        : "border-gray-200 bg-gray-50 opacity-75 hover:opacity-100"
                     }`}
                   >
                     <div>
                       <div className="flex items-center space-x-3">
-                        <h5 className="font-medium text-gray-900">
+                        <h5
+                          className={`font-medium ${
+                            estimation.isActive
+                              ? "text-gray-900"
+                              : "text-gray-700"
+                          }`}
+                        >
                           {estimation.name}
                         </h5>
                         {estimation.isActive && (
                           <Badge variant="info">Active</Badge>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">
+                      <p
+                        className={`text-sm ${
+                          estimation.isActive
+                            ? "text-gray-600"
+                            : "text-gray-500"
+                        }`}
+                      >
                         Created:{" "}
                         {new Date(estimation.createdDate).toLocaleDateString(
                           "en-GB"
@@ -1031,11 +1095,17 @@ export default function ProjectDetailsPage() {
                         {new Date(estimation.updatedDate).toLocaleDateString(
                           "en-GB"
                         )}{" "}
-                        •{estimation.items.length} items
+                        • {estimation.items.length} items
                       </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <span className="text-lg font-semibold text-green-600">
+                      <span
+                        className={`text-lg font-semibold ${
+                          estimation.isActive
+                            ? "text-green-600"
+                            : "text-green-500"
+                        }`}
+                      >
                         ₹{estimation.totalAmount.toLocaleString("en-IN")}
                       </span>
                       <div className="flex items-center space-x-2">
@@ -1044,6 +1114,7 @@ export default function ProjectDetailsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => setActiveEstimation(estimation.id)}
+                            className="text-xs"
                           >
                             Set Active
                           </Button>
@@ -1055,10 +1126,27 @@ export default function ProjectDetailsPage() {
                             setCurrentEstimation(estimation);
                             setShowEstimationDetails(true);
                           }}
+                          className="text-xs"
                         >
-                          <Eye className="h-4 w-4 mr-1" />
+                          <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
+
+                        {/* Delete Button - Only show if more than 1 estimation exists */}
+                        {projectEstimations.length > 1 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setDeletingEstimation(estimation);
+                              setShowDeleteConfirmation(true);
+                            }}
+                            className="text-xs text-red-600 hover:bg-red-50 border-red-200"
+                            title="Delete Estimation"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1072,7 +1160,7 @@ export default function ProjectDetailsPage() {
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-md font-semibold text-gray-900">
-                  Current Estimation: {currentEstimation.name}
+                {currentEstimation.name}
                 </h4>
                 <Button
                   size="sm"
@@ -1284,7 +1372,6 @@ export default function ProjectDetailsPage() {
       id: "estimations",
       label: "Estimations",
       content: <EstimationsTab />,
-      badge: currentEstimation?.items.length || 0,
     },
     {
       id: "agreements",
@@ -1489,6 +1576,25 @@ export default function ProjectDetailsPage() {
         </div>
       </InlineEditForm>
 
+      <ConfirmationModal
+        isOpen={showDeleteConfirmation}
+        onClose={() => {
+          setShowDeleteConfirmation(false);
+          setDeletingEstimation(null);
+        }}
+        onConfirm={() =>
+          deletingEstimation && deleteEstimation(deletingEstimation.id)
+        }
+        title="Delete Estimation"
+        message={
+          deletingEstimation
+            ? `Are you sure you want to delete "${deletingEstimation.name}"? This action cannot be undone and will permanently remove all ${deletingEstimation.items.length} items in this estimation.`
+            : ""
+        }
+        confirmText="Delete Estimation"
+        isLoading={isSavingInline}
+      />
+
       {/* Status Change Confirmation Modal */}
       <ConfirmationModal
         isOpen={showStatusConfirmation}
@@ -1569,8 +1675,7 @@ export default function ProjectDetailsPage() {
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="secondary">{template.category}</Badge>
-                    <input
+                    <Input
                       type="radio"
                       name="template"
                       checked={selectedTemplate?.id === template.id}
