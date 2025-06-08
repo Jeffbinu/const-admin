@@ -725,41 +725,11 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
           {/* Right Pane - Preview Table */}
           <div className="flex flex-col min-h-0">
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col h-full">
-              {/* Header - Fixed */}
-              <div className="flex-shrink-0 mb-4">
-                <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                  <Calculator className="h-5 w-5 mr-2 text-green-600" />
-                  Template Summary
-                </h4>
-
-                {/* Summary Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded p-3 border">
-                    <p className="text-sm text-gray-600">Configured Items</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {templateItemsData.length}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      of {formData.items.length} total
-                    </p>
-                  </div>
-                  <div className="bg-white rounded p-3 border">
-                    <p className="text-sm text-gray-600">Total Amount</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      ₹{(calculateTemplateTotal() / 100000).toFixed(1)}L
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      ₹{calculateTemplateTotal().toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               {/* Items Table - Flexible Height */}
               <div className="bg-white rounded-lg border border-gray-200 flex-1 min-h-0 flex flex-col">
                 {templateItemsData.length > 0 ? (
                   <div className="p-4 h-full flex flex-col">
-                    <h5 className="font-medium text-gray-900 mb-4">Configured Items</h5>
                     <div className="flex-1 min-h-0">
                       <DataTable
                         data={templateItemsData}
