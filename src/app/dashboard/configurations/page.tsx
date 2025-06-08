@@ -73,7 +73,7 @@ export default function ConfigurationsPage() {
 
         </div>
       ),
-      hidden: undefined
+      hidden: false
     },
     {
       id: "unit",
@@ -85,7 +85,7 @@ export default function ConfigurationsPage() {
           {value}
         </span>
       ),
-      hidden: undefined
+      hidden: false
     },
     {
       id: "rate",
@@ -101,7 +101,7 @@ export default function ConfigurationsPage() {
           })}
         </span>
       ),
-      hidden: undefined
+      hidden: false
     },
   ];
 
@@ -229,7 +229,7 @@ export default function ConfigurationsPage() {
           <p className="text-xs text-gray-500 mt-1">ID: {row.id}</p>
         </div>
       ),
-      hidden: undefined
+      hidden: false
     },
     {
       id: "itemsCount",
@@ -243,7 +243,7 @@ export default function ConfigurationsPage() {
           </span>
         </div>
       ),
-      hidden: undefined
+      hidden: false
     },
     {
       id: "lastModified",
@@ -265,7 +265,7 @@ export default function ConfigurationsPage() {
           </p>
         </div>
       ),
-      hidden: undefined
+      hidden: false
     },
   ];
 
@@ -418,7 +418,7 @@ export default function ConfigurationsPage() {
           <p className="text-xs text-gray-500 mt-1">ID: {row.id}</p>
         </div>
       ),
-      hidden: undefined
+      hidden: false
     },
     {
       id: "type",
@@ -442,7 +442,7 @@ export default function ConfigurationsPage() {
           </Badge>
         );
       },
-      hidden: undefined
+      hidden: false
     },
     {
       id: "lastModified",
@@ -464,7 +464,7 @@ export default function ConfigurationsPage() {
           </p>
         </div>
       ),
-      hidden: undefined
+      hidden: false
     },
   ];
 

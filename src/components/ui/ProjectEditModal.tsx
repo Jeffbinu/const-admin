@@ -288,6 +288,7 @@ export default function ProjectEditModal({
             </div>
           );
         },
+        hidden: false
       },
       {
         id: 'quantity',
@@ -296,6 +297,7 @@ export default function ProjectEditModal({
         render: (value) => (
           <div className="text-center font-medium">{value}</div>
         ),
+        hidden: false
       },
       {
         id: 'rate',
@@ -304,6 +306,7 @@ export default function ProjectEditModal({
         render: (value) => (
           <div className="text-right font-medium">₹{value.toLocaleString('en-IN')}</div>
         ),
+        hidden: false
       },
       {
         id: 'amount',
@@ -314,6 +317,7 @@ export default function ProjectEditModal({
             ₹{value.toLocaleString('en-IN')}
           </div>
         ),
+        hidden: false
       },
       {
         id: 'notes',
@@ -324,6 +328,7 @@ export default function ProjectEditModal({
             {value || '-'}
           </div>
         ),
+        hidden: false
       },
     ];
 

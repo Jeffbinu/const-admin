@@ -46,6 +46,7 @@ export interface LineItem {
   rate: number;
   description?: string;
   align?: string;
+  hidden?:any;
 }
 
 export interface EstimationTemplateItem {
@@ -129,6 +130,7 @@ export interface EstimationTemplateFormData {
 
 // UI Component Types
 export interface TableColumn<T> {
+  hidden: any;
   id: string;
   header: string;
   accessor: keyof T | ((item: T) => any);
