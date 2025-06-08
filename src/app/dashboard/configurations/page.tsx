@@ -70,9 +70,10 @@ export default function ConfigurationsPage() {
       render: (value, row) => (
         <div>
           <span className="font-medium text-gray-900">{value}</span>
-        
+
         </div>
       ),
+      hidden: undefined
     },
     {
       id: "unit",
@@ -84,6 +85,7 @@ export default function ConfigurationsPage() {
           {value}
         </span>
       ),
+      hidden: undefined
     },
     {
       id: "rate",
@@ -99,6 +101,7 @@ export default function ConfigurationsPage() {
           })}
         </span>
       ),
+      hidden: undefined
     },
   ];
 
@@ -226,6 +229,7 @@ export default function ConfigurationsPage() {
           <p className="text-xs text-gray-500 mt-1">ID: {row.id}</p>
         </div>
       ),
+      hidden: undefined
     },
     {
       id: "itemsCount",
@@ -239,6 +243,7 @@ export default function ConfigurationsPage() {
           </span>
         </div>
       ),
+      hidden: undefined
     },
     {
       id: "lastModified",
@@ -260,6 +265,7 @@ export default function ConfigurationsPage() {
           </p>
         </div>
       ),
+      hidden: undefined
     },
   ];
 
@@ -412,6 +418,7 @@ export default function ConfigurationsPage() {
           <p className="text-xs text-gray-500 mt-1">ID: {row.id}</p>
         </div>
       ),
+      hidden: undefined
     },
     {
       id: "type",
@@ -428,15 +435,14 @@ export default function ConfigurationsPage() {
         return (
           <Badge
             variant="secondary"
-            className={
-              typeColors[value as keyof typeof typeColors] ||
-              "bg-gray-100 text-gray-800"
-            }
+            className={typeColors[value as keyof typeof typeColors] ||
+              "bg-gray-100 text-gray-800"}
           >
             {value}
           </Badge>
         );
       },
+      hidden: undefined
     },
     {
       id: "lastModified",
@@ -458,6 +464,7 @@ export default function ConfigurationsPage() {
           </p>
         </div>
       ),
+      hidden: undefined
     },
   ];
 
