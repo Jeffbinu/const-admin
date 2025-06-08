@@ -656,7 +656,6 @@ export default function ConfigurationsPage() {
         }
         size="full"
         showFullscreenToggle={true}
-        custom_class="h-[95vh]"
       >
         <EstimationTemplateForm
           onSubmit={handleCreateTemplate}

@@ -56,7 +56,7 @@ export const mockProjects: Project[] = [
       },
     ],
     projectAddress: "",
-    phoneNumber: ""
+    phoneNumber: "",
   },
   {
     id: "PRJ002",
@@ -79,7 +79,7 @@ export const mockProjects: Project[] = [
       },
     ],
     projectAddress: "",
-    phoneNumber: ""
+    phoneNumber: "",
   },
   {
     id: "PRJ003",
@@ -114,7 +114,7 @@ export const mockProjects: Project[] = [
       },
     ],
     projectAddress: "",
-    phoneNumber: ""
+    phoneNumber: "",
   },
   {
     id: "PRJ004",
@@ -137,7 +137,7 @@ export const mockProjects: Project[] = [
       },
     ],
     projectAddress: "",
-    phoneNumber: ""
+    phoneNumber: "",
   },
 ];
 
@@ -335,7 +335,7 @@ export const mockProjectEstimations: ProjectEstimation[] = [
         quantity: 100,
         rate: 350,
         amount: 35000,
-        notes: "High quality cement for foundation"
+        notes: "High quality cement for foundation",
       },
       {
         id: "PEI002",
@@ -343,7 +343,7 @@ export const mockProjectEstimations: ProjectEstimation[] = [
         quantity: 5000,
         rate: 8,
         amount: 40000,
-        notes: "Red clay bricks for wall construction"
+        notes: "Red clay bricks for wall construction",
       },
       {
         id: "PEI003",
@@ -351,7 +351,7 @@ export const mockProjectEstimations: ProjectEstimation[] = [
         quantity: 20,
         rate: 1800,
         amount: 36000,
-        notes: "River sand for concrete mix"
+        notes: "River sand for concrete mix",
       },
       {
         id: "PEI004",
@@ -359,7 +359,7 @@ export const mockProjectEstimations: ProjectEstimation[] = [
         quantity: 2000,
         rate: 65,
         amount: 130000,
-        notes: "TMT bars for structural reinforcement"
+        notes: "TMT bars for structural reinforcement",
       },
       {
         id: "PEI005",
@@ -367,7 +367,7 @@ export const mockProjectEstimations: ProjectEstimation[] = [
         quantity: 30,
         rate: 800,
         amount: 24000,
-        notes: "Skilled mason work"
+        notes: "Skilled mason work",
       },
       {
         id: "PEI006",
@@ -375,10 +375,10 @@ export const mockProjectEstimations: ProjectEstimation[] = [
         quantity: 15,
         rate: 4500,
         amount: 67500,
-        notes: "Foundation concrete work"
-      }
-    ]
-  }
+        notes: "Foundation concrete work",
+      },
+    ],
+  },
 ];
 
 export const mockAgreements: Agreement[] = [
@@ -478,6 +478,66 @@ export const dataManager = {
     return null;
   },
 
+  async updateProjectEstimation(
+    estimationId: string,
+    updates: {
+      name?: string;
+      items?: Array<{
+        id: string;
+        lineItemId: string;
+        quantity: number;
+        notes?: string;
+      }>;
+    }
+  ): Promise<ProjectEstimation> {
+    const estimationIndex = mockProjectEstimations.findIndex(
+      (est) => est.id === estimationId
+    );
+    if (estimationIndex === -1) {
+      throw new Error("Estimation not found");
+    }
+
+    const estimation = mockProjectEstimations[estimationIndex];
+
+    // Update name if provided
+    if (updates.name) {
+      estimation.name = updates.name;
+    }
+
+    // Update items if provided
+    if (updates.items) {
+      const updatedItems: ProjectEstimationItem[] = updates.items.map(
+        (item, index) => {
+          const lineItem = mockLineItems.find(
+            (li) => li.id === item.lineItemId
+          );
+          const rate = lineItem?.rate || 0;
+          const amount = item.quantity * rate;
+
+          return {
+            id: item.id || `PEI${Date.now()}_${index}`,
+            lineItemId: item.lineItemId,
+            quantity: item.quantity,
+            rate: rate,
+            amount: amount,
+            notes: item.notes || "",
+          };
+        }
+      );
+
+      estimation.items = updatedItems;
+    }
+
+    // Recalculate total amount
+    estimation.totalAmount = estimation.items.reduce(
+      (sum, item) => sum + item.amount,
+      0
+    );
+    estimation.updatedDate = new Date().toISOString().split("T")[0];
+
+    return estimation;
+  },
+
   async getAllProjects(): Promise<Project[]> {
     return [...mockProjects];
   },
@@ -530,11 +590,11 @@ export const dataManager = {
     mockProjects.splice(index, 1);
     // Also remove related estimations
     const estimationIndexes = mockProjectEstimations
-      .map((est, idx) => est.projectId === id ? idx : -1)
-      .filter(idx => idx !== -1)
+      .map((est, idx) => (est.projectId === id ? idx : -1))
+      .filter((idx) => idx !== -1)
       .sort((a, b) => b - a); // Sort in descending order to avoid index issues
-    
-    estimationIndexes.forEach(idx => mockProjectEstimations.splice(idx, 1));
+
+    estimationIndexes.forEach((idx) => mockProjectEstimations.splice(idx, 1));
     return true;
   },
 
@@ -624,8 +684,11 @@ export const dataManager = {
   // Project Estimations - NEW METHODS
   async getProjectEstimations(projectId: string): Promise<ProjectEstimation[]> {
     return mockProjectEstimations
-      .filter(est => est.projectId === projectId)
-      .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+      .filter((est) => est.projectId === projectId)
+      .sort(
+        (a, b) =>
+          new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
+      );
   },
 
   async createProjectEstimationFromTemplate(
@@ -633,39 +696,49 @@ export const dataManager = {
     templateId: string,
     name: string
   ): Promise<ProjectEstimation> {
-    const template = mockEstimationTemplates.find(t => t.id === templateId);
+    const template = mockEstimationTemplates.find((t) => t.id === templateId);
     if (!template) {
       throw new Error("Template not found");
     }
 
     // Get existing estimations for this project to determine version
-    const existingEstimations = mockProjectEstimations.filter(est => est.projectId === projectId);
-    const nextVersion = Math.max(...existingEstimations.map(est => est.version || 1), 0) + 1;
+    const existingEstimations = mockProjectEstimations.filter(
+      (est) => est.projectId === projectId
+    );
+    const nextVersion =
+      Math.max(...existingEstimations.map((est) => est.version || 1), 0) + 1;
 
     // Set all existing estimations as inactive
-    mockProjectEstimations.forEach(est => {
+    mockProjectEstimations.forEach((est) => {
       if (est.projectId === projectId) {
         est.isActive = false;
       }
     });
 
     // Create estimation items from template
-    const estimationItems: ProjectEstimationItem[] = template.items.map((templateItem, index) => {
-      const lineItem = mockLineItems.find(li => li.id === templateItem.lineItemId);
-      const rate = lineItem?.rate || 0;
-      const amount = templateItem.quantity * rate;
+    const estimationItems: ProjectEstimationItem[] = template.items.map(
+      (templateItem, index) => {
+        const lineItem = mockLineItems.find(
+          (li) => li.id === templateItem.lineItemId
+        );
+        const rate = lineItem?.rate || 0;
+        const amount = templateItem.quantity * rate;
 
-      return {
-        id: `PEI${Date.now()}_${index}`,
-        lineItemId: templateItem.lineItemId,
-        quantity: templateItem.quantity,
-        rate: rate,
-        amount: amount,
-        notes: templateItem.notes || ""
-      };
-    });
+        return {
+          id: `PEI${Date.now()}_${index}`,
+          lineItemId: templateItem.lineItemId,
+          quantity: templateItem.quantity,
+          rate: rate,
+          amount: amount,
+          notes: templateItem.notes || "",
+        };
+      }
+    );
 
-    const totalAmount = estimationItems.reduce((sum, item) => sum + item.amount, 0);
+    const totalAmount = estimationItems.reduce(
+      (sum, item) => sum + item.amount,
+      0
+    );
 
     const newEstimation: ProjectEstimation = {
       id: `PE${String(mockProjectEstimations.length + 1).padStart(3, "0")}`,
@@ -677,7 +750,7 @@ export const dataManager = {
       updatedDate: new Date().toISOString().split("T")[0],
       isActive: true,
       version: nextVersion,
-      items: estimationItems
+      items: estimationItems,
     };
 
     mockProjectEstimations.push(newEstimation);
@@ -689,22 +762,30 @@ export const dataManager = {
     itemId: string,
     updates: Partial<ProjectEstimationItem>
   ): Promise<ProjectEstimation> {
-    const estimationIndex = mockProjectEstimations.findIndex(est => est.id === estimationId);
+    const estimationIndex = mockProjectEstimations.findIndex(
+      (est) => est.id === estimationId
+    );
     if (estimationIndex === -1) {
       throw new Error("Estimation not found");
     }
 
     const estimation = mockProjectEstimations[estimationIndex];
-    const itemIndex = estimation.items.findIndex(item => item.id === itemId);
+    const itemIndex = estimation.items.findIndex((item) => item.id === itemId);
     if (itemIndex === -1) {
       throw new Error("Estimation item not found");
     }
 
     // Update the item
-    estimation.items[itemIndex] = { ...estimation.items[itemIndex], ...updates };
+    estimation.items[itemIndex] = {
+      ...estimation.items[itemIndex],
+      ...updates,
+    };
 
     // Recalculate total amount
-    estimation.totalAmount = estimation.items.reduce((sum, item) => sum + item.amount, 0);
+    estimation.totalAmount = estimation.items.reduce(
+      (sum, item) => sum + item.amount,
+      0
+    );
     estimation.updatedDate = new Date().toISOString().split("T")[0];
 
     return estimation;
@@ -714,13 +795,15 @@ export const dataManager = {
     estimationId: string,
     itemId: string
   ): Promise<ProjectEstimation> {
-    const estimationIndex = mockProjectEstimations.findIndex(est => est.id === estimationId);
+    const estimationIndex = mockProjectEstimations.findIndex(
+      (est) => est.id === estimationId
+    );
     if (estimationIndex === -1) {
       throw new Error("Estimation not found");
     }
 
     const estimation = mockProjectEstimations[estimationIndex];
-    const itemIndex = estimation.items.findIndex(item => item.id === itemId);
+    const itemIndex = estimation.items.findIndex((item) => item.id === itemId);
     if (itemIndex === -1) {
       throw new Error("Estimation item not found");
     }
@@ -729,22 +812,32 @@ export const dataManager = {
     estimation.items.splice(itemIndex, 1);
 
     // Recalculate total amount
-    estimation.totalAmount = estimation.items.reduce((sum, item) => sum + item.amount, 0);
+    estimation.totalAmount = estimation.items.reduce(
+      (sum, item) => sum + item.amount,
+      0
+    );
     estimation.updatedDate = new Date().toISOString().split("T")[0];
 
     return estimation;
   },
 
-  async setActiveProjectEstimation(projectId: string, estimationId: string): Promise<boolean> {
-    const projectEstimations = mockProjectEstimations.filter(est => est.projectId === projectId);
-    
+  async setActiveProjectEstimation(
+    projectId: string,
+    estimationId: string
+  ): Promise<boolean> {
+    const projectEstimations = mockProjectEstimations.filter(
+      (est) => est.projectId === projectId
+    );
+
     // Set all estimations for this project as inactive
-    projectEstimations.forEach(est => {
+    projectEstimations.forEach((est) => {
       est.isActive = false;
     });
 
     // Set the specified estimation as active
-    const targetEstimation = mockProjectEstimations.find(est => est.id === estimationId);
+    const targetEstimation = mockProjectEstimations.find(
+      (est) => est.id === estimationId
+    );
     if (targetEstimation) {
       targetEstimation.isActive = true;
       return true;
@@ -757,27 +850,34 @@ export const dataManager = {
     estimationId: string,
     newName: string
   ): Promise<ProjectEstimation> {
-    const originalEstimation = mockProjectEstimations.find(est => est.id === estimationId);
+    const originalEstimation = mockProjectEstimations.find(
+      (est) => est.id === estimationId
+    );
     if (!originalEstimation) {
       throw new Error("Estimation not found");
     }
 
     // Get existing estimations for this project to determine version
-    const existingEstimations = mockProjectEstimations.filter(est => est.projectId === originalEstimation.projectId);
-    const nextVersion = Math.max(...existingEstimations.map(est => est.version || 1), 0) + 1;
+    const existingEstimations = mockProjectEstimations.filter(
+      (est) => est.projectId === originalEstimation.projectId
+    );
+    const nextVersion =
+      Math.max(...existingEstimations.map((est) => est.version || 1), 0) + 1;
 
     // Set all existing estimations as inactive
-    mockProjectEstimations.forEach(est => {
+    mockProjectEstimations.forEach((est) => {
       if (est.projectId === originalEstimation.projectId) {
         est.isActive = false;
       }
     });
 
     // Create new estimation items with new IDs
-    const newItems: ProjectEstimationItem[] = originalEstimation.items.map((item, index) => ({
-      ...item,
-      id: `PEI${Date.now()}_${index}`
-    }));
+    const newItems: ProjectEstimationItem[] = originalEstimation.items.map(
+      (item, index) => ({
+        ...item,
+        id: `PEI${Date.now()}_${index}`,
+      })
+    );
 
     const newEstimation: ProjectEstimation = {
       id: `PE${String(mockProjectEstimations.length + 1).padStart(3, "0")}`,
@@ -789,7 +889,7 @@ export const dataManager = {
       updatedDate: new Date().toISOString().split("T")[0],
       isActive: true,
       version: nextVersion,
-      items: newItems
+      items: newItems,
     };
 
     mockProjectEstimations.push(newEstimation);
@@ -797,7 +897,9 @@ export const dataManager = {
   },
 
   async deleteProjectEstimation(estimationId: string): Promise<boolean> {
-    const index = mockProjectEstimations.findIndex(est => est.id === estimationId);
+    const index = mockProjectEstimations.findIndex(
+      (est) => est.id === estimationId
+    );
     if (index === -1) return false;
 
     const estimation = mockProjectEstimations[index];
@@ -806,9 +908,13 @@ export const dataManager = {
     // If this was the active estimation, make the most recent one active
     if (estimation.isActive) {
       const remainingEstimations = mockProjectEstimations
-        .filter(est => est.projectId === estimation.projectId)
-        .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
-      
+        .filter((est) => est.projectId === estimation.projectId)
+        .sort(
+          (a, b) =>
+            new Date(b.createdDate).getTime() -
+            new Date(a.createdDate).getTime()
+        );
+
       if (remainingEstimations.length > 0) {
         remainingEstimations[0].isActive = true;
       }
@@ -860,7 +966,7 @@ export const dataManager = {
 
     // Get the active estimation for this project
     const activeEstimation = mockProjectEstimations.find(
-      est => est.projectId === projectId && est.isActive
+      (est) => est.projectId === projectId && est.isActive
     );
 
     // Replace template variables with project data
@@ -874,7 +980,9 @@ export const dataManager = {
     );
     content = content.replace(
       /{{ESTIMATED_BUDGET}}/g,
-      (activeEstimation?.totalAmount || project.estimatedBudget).toLocaleString("en-IN")
+      (activeEstimation?.totalAmount || project.estimatedBudget).toLocaleString(
+        "en-IN"
+      )
     );
     content = content.replace(/{{AGREEMENT_DATE}}/g, project.agreementDate);
     content = content.replace(
@@ -898,25 +1006,39 @@ export const dataManager = {
           </thead>
           <tbody>`;
 
-      activeEstimation.items.forEach(item => {
-        const lineItem = mockLineItems.find(li => li.id === item.lineItemId);
+      activeEstimation.items.forEach((item) => {
+        const lineItem = mockLineItems.find((li) => li.id === item.lineItemId);
         estimationTable += `
             <tr>
               <td style="border: 1px solid #d1d5db; padding: 8px;">
-                ${lineItem?.name || 'Unknown Item'}
-                ${item.notes ? `<br><small style="color: #666;">${item.notes}</small>` : ''}
+                ${lineItem?.name || "Unknown Item"}
+                ${
+                  item.notes
+                    ? `<br><small style="color: #666;">${item.notes}</small>`
+                    : ""
+                }
               </td>
-              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">${item.quantity}</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">${lineItem?.unit || '-'}</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right;">${item.rate.toLocaleString('en-IN')}</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right;">${item.amount.toLocaleString('en-IN')}</td>
+              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">${
+                item.quantity
+              }</td>
+              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">${
+                lineItem?.unit || "-"
+              }</td>
+              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right;">${item.rate.toLocaleString(
+                "en-IN"
+              )}</td>
+              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right;">${item.amount.toLocaleString(
+                "en-IN"
+              )}</td>
             </tr>`;
       });
 
       estimationTable += `
             <tr style="background-color: #f9fafb; font-weight: bold;">
               <td style="border: 1px solid #d1d5db; padding: 8px;" colspan="4">Total Amount</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right;">₹${activeEstimation.totalAmount.toLocaleString('en-IN')}</td>
+              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right;">₹${activeEstimation.totalAmount.toLocaleString(
+                "en-IN"
+              )}</td>
             </tr>
           </tbody>
         </table>`;

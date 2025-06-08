@@ -4,14 +4,29 @@ import {
   EstimationTemplateFormData,
   LineItem,
   EstimationTemplateItem,
+  LineItemFormData,
 } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Modal } from "@/components/ui/Modal";
 import DataTable from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { useLineItems } from "@/hooks/useLineItems";
-import { Plus, Trash2, Package, Calculator, Edit, Info } from "lucide-react";
+import { useToast } from "@/hooks/useToast";
+import { 
+  Plus, 
+  Trash2, 
+  Package, 
+  Calculator, 
+  Edit, 
+  Info, 
+  Copy,
+  Save,
+  PlusCircle,
+  CheckCircle,
+  Edit3
+} from "lucide-react";
 
 interface EstimationTemplateFormProps {
   onSubmit: (data: EstimationTemplateFormData) => Promise<void>;
@@ -31,13 +46,161 @@ interface TemplateItemDisplay {
   lineItemId: string;
 }
 
+// Inline Line Item Creation Form Component
+const InlineLineItemForm: React.FC<{
+  onSubmit: (data: LineItemFormData) => Promise<void>;
+  onCancel: () => void;
+  isLoading?: boolean;
+}> = ({ onSubmit, onCancel, isLoading = false }) => {
+  const [formData, setFormData] = useState<LineItemFormData>({
+    name: "",
+    unit: "",
+    rate: 0,
+    category: "Materials",
+    description: "",
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const categoryOptions = [
+    { value: "Materials", label: "Materials" },
+    { value: "Labor", label: "Labor" },
+    { value: "Equipment", label: "Equipment" },
+    { value: "Overhead", label: "Overhead" },
+    { value: "Other", label: "Other" },
+  ];
+
+  const unitOptions = [
+    { value: "sq ft", label: "Square Feet (sq ft)" },
+    { value: "sq m", label: "Square Meters (sq m)" },
+    { value: "cu ft", label: "Cubic Feet (cu ft)" },
+    { value: "cu m", label: "Cubic Meters (cu m)" },
+    { value: "linear ft", label: "Linear Feet (linear ft)" },
+    { value: "linear m", label: "Linear Meters (linear m)" },
+    { value: "pieces", label: "Pieces (pcs)" },
+    { value: "kg", label: "Kilograms (kg)" },
+    { value: "tons", label: "Tons" },
+    { value: "hours", label: "Hours" },
+    { value: "days", label: "Days" },
+    { value: "lump sum", label: "Lump Sum" },
+    { value: "bags", label: "Bags" },
+    { value: "boxes", label: "Boxes" },
+    { value: "rolls", label: "Rolls" },
+    { value: "sheets", label: "Sheets" },
+  ];
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) newErrors.name = "Item name is required";
+    if (!formData.unit.trim()) newErrors.unit = "Unit is required";
+    if (formData.rate <= 0) newErrors.rate = "Rate must be greater than 0";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    
+    try {
+      await onSubmit(formData);
+    } catch (error) {
+      console.error("Failed to create line item:", error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center mb-2">
+          <PlusCircle className="h-5 w-5 text-blue-600 mr-2" />
+          <h4 className="font-medium text-blue-900">Add New Item to Library</h4>
+        </div>
+        <p className="text-sm text-blue-700">
+          This will create a new line item that you can use in this template and future projects.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Item Name *"
+          value={formData.name}
+          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+          error={errors.name}
+          placeholder="e.g., Cement Portland OPC 53 Grade"
+          required
+        />
+
+        <Select
+          label="Category *"
+          value={formData.category}
+          onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+          options={categoryOptions}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select
+          label="Unit of Measurement *"
+          value={formData.unit}
+          onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
+          options={[
+            { value: "", label: "Select a unit" },
+            ...unitOptions,
+          ]}
+          error={errors.unit}
+          required
+        />
+
+        <Input
+          label="Rate (₹) *"
+          type="number"
+          min="0"
+          step="0.01"
+          value={formData.rate}
+          onChange={(e) => setFormData(prev => ({ ...prev, rate: parseFloat(e.target.value) || 0 }))}
+          error={errors.rate}
+          placeholder="Enter rate per unit"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Description (Optional)
+        </label>
+        <textarea
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={3}
+          placeholder="Add specifications, quality standards, or other details"
+        />
+      </div>
+
+      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Creating..." : "Create Item"}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
   onSubmit,
   onCancel,
   initialData,
   isLoading = false,
 }) => {
-  const { lineItems } = useLineItems();
+  const { lineItems, createLineItem } = useLineItems();
+  const { showToast } = useToast();
 
   const [formData, setFormData] = useState<EstimationTemplateFormData>({
     name: initialData?.name || "",
@@ -46,6 +209,10 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
   });
 
   const [errors, setErrors] = useState<{ name?: string; items?: string }>({});
+  const [showNewLineItemModal, setShowNewLineItemModal] = useState(false);
+  const [isCreatingLineItem, setIsCreatingLineItem] = useState(false);
+  const [pendingItemIndex, setPendingItemIndex] = useState<number | null>(null);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   const handleChange = (
     field: keyof EstimationTemplateFormData,
@@ -71,6 +238,8 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
       ...prev,
       items: [...prev.items, newItem],
     }));
+    // Auto-open the editing for the new item
+    setEditingItemIndex(formData.items.length);
   };
 
   const updateItem = (
@@ -91,6 +260,69 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
       ...prev,
       items: prev.items.filter((_, i) => i !== index),
     }));
+    // Close editing if this item was being edited
+    if (editingItemIndex === index) {
+      setEditingItemIndex(null);
+    }
+  };
+
+  const duplicateItem = (index: number) => {
+    const itemToDuplicate = formData.items[index];
+    const duplicatedItem: EstimationTemplateItem = {
+      ...itemToDuplicate,
+      id: `item_${Date.now()}`,
+      quantity: itemToDuplicate.quantity,
+    };
+    
+    setFormData((prev) => ({
+      ...prev,
+      items: [...prev.items.slice(0, index + 1), duplicatedItem, ...prev.items.slice(index + 1)],
+    }));
+  };
+
+  const handleCreateNewLineItem = (index: number) => {
+    setPendingItemIndex(index);
+    setShowNewLineItemModal(true);
+  };
+
+  const handleNewLineItemSubmit = async (data: LineItemFormData) => {
+    setIsCreatingLineItem(true);
+    try {
+      await createLineItem(data);
+      
+      // Close modal immediately after successful creation
+      setShowNewLineItemModal(false);
+      
+      // Show success toast
+      showToast(`"${data.name}" has been added to your line items library!`, "success");
+      
+      // Wait a moment for the lineItems to update, then auto-select the new item
+      setTimeout(() => {
+        if (pendingItemIndex !== null) {
+          // Find the newly created item by matching the name and other properties
+          const newLineItem = lineItems.find(item => 
+            item.name === data.name && 
+            item.category === data.category && 
+            item.rate === data.rate && 
+            item.unit === data.unit
+          );
+          
+          if (newLineItem) {
+            updateItem(pendingItemIndex, "lineItemId", newLineItem.id);
+            showToast(`"${data.name}" has been selected for this template item!`, "success");
+            // Auto-close editing since item is now selected
+            setEditingItemIndex(null);
+          }
+        }
+        setPendingItemIndex(null);
+      }, 500); // Wait 500ms for state to update
+      
+    } catch (error) {
+      console.error("Failed to create line item:", error);
+      showToast("Failed to create line item. Please try again.", "error");
+    } finally {
+      setIsCreatingLineItem(false);
+    }
   };
 
   const validateForm = (): boolean => {
@@ -118,8 +350,13 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
 
     try {
       await onSubmit(formData);
+      // Show success toast based on whether it's create or update
+      const action = initialData ? "updated" : "created";
+      showToast(`Template "${formData.name}" has been ${action} successfully!`, "success");
     } catch (error) {
       console.error("Form submission error:", error);
+      const action = initialData ? "update" : "create";
+      showToast(`Failed to ${action} template. Please try again.`, "error");
     }
   };
 
@@ -173,7 +410,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
         <div>
           <span className="font-medium text-gray-900">{value}</span>
           <p className="text-xs text-gray-500">
-            ID: {row.lineItemId.slice(-8)}
+            {lineItems.find(item => item.id === row.lineItemId)?.category}
           </p>
         </div>
       ),
@@ -214,7 +451,6 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
     },
   ];
 
-
   return (
     <div className="h-full w-full flex flex-col">
       <form onSubmit={handleSubmit} className="h-full w-full flex flex-col">
@@ -237,7 +473,6 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                 placeholder="Enter a descriptive name (e.g., 'Small Bedroom Construction')"
                 required
               />
-        
             </div>
 
             {/* Add Items Section - Scrollable */}
@@ -247,10 +482,10 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                 <div>
                   <h4 className="text-lg font-medium text-gray-900 flex items-center">
                     <Package className="h-5 w-5 mr-2 text-blue-600" />
-                    Add Items to Template
+                    Template Items ({formData.items.length})
                   </h4>
                   <p className="text-sm text-gray-600">
-                    Build your template by adding line items
+                    Add items to build your estimation template
                   </p>
                 </div>
                 <Button
@@ -274,100 +509,212 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
 
               {/* Items Form - Scrollable Area */}
               <div className="flex-1 overflow-y-auto pr-2 min-h-0">
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {formData.items.map((item, index) => {
-                    const selectedLineItem = getSelectedLineItem(
-                      item.lineItemId
-                    );
+                    const selectedLineItem = getSelectedLineItem(item.lineItemId);
                     const itemTotal = calculateItemTotal(item);
+                    const isEditing = editingItemIndex === index;
+                    const isComplete = !!selectedLineItem;
 
                     return (
                       <div
                         key={item.id}
-                        id={`item-${index}`}
-                        className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm"
+                        className={`border rounded-lg p-4 transition-all ${
+                          isComplete 
+                            ? 'bg-green-50 border-green-200' 
+                            : isEditing 
+                            ? 'bg-blue-50 border-blue-200' 
+                            : 'bg-white border-gray-200'
+                        }`}
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <h5 className="font-medium text-gray-900">
-                            Item #{index + 1}
-                          </h5>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="text-red-600 hover:bg-red-50 h-8 w-8 p-0"
-                            title="Remove this item"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-
-                        <div className="space-y-3">
-                          <Select
-                            label="Choose Item *"
-                            value={item.lineItemId}
-                            onChange={(e) =>
-                              updateItem(index, "lineItemId", e.target.value)
-                            }
-                            options={[
-                              {
-                                value: "",
-                                label: "Select an item from your list",
-                              },
-                              ...lineItemOptions,
-                            ]}
-                            required
-                          />
-
-                          {selectedLineItem && (
-                            <div className="grid grid-cols-2 gap-3">
-                              <Input
-                                label="Quantity *"
-                                type="number"
-                                min="1"
-                                step="0.01"
-                                value={item.quantity}
-                                onChange={(e) =>
-                                  updateItem(
-                                    index,
-                                    "quantity",
-                                    parseFloat(e.target.value) || 1
-                                  )
-                                }
-                                required
-                              />
-                              <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-700">
-                                  Rate & Unit
-                                </label>
-                                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                                  <p>
-                                    ₹{selectedLineItem.rate}/
-                                    {selectedLineItem.unit}
-                                  </p>
-                                  <p className="text-xs text-green-600">
-                                    Total: ₹
-                                    {itemTotal.toLocaleString("en-IN", {
-                                      minimumFractionDigits: 2,
-                                    })}
-                                  </p>
-                                </div>
-                              </div>
+                        {/* Item Header */}
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                              isComplete ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'
+                            }`}>
+                              {isComplete ? <CheckCircle className="h-4 w-4" /> : index + 1}
                             </div>
-                          )}
+                            <h5 className="font-medium text-gray-900">
+                              {selectedLineItem ? selectedLineItem.name : `Item #${index + 1}`}
+                            </h5>
+                            {isComplete && (
+                              <Badge variant="secondary" className="text-xs">
+                                ₹{itemTotal.toLocaleString("en-IN")}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center space-x-1">
+                            {!isEditing && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingItemIndex(index)}
+                                className="text-blue-600 hover:bg-blue-50 h-8 w-8 p-0"
+                                title="Edit this item"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            
+                            {selectedLineItem && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => duplicateItem(index)}
+                                className="text-green-600 hover:bg-green-50 h-8 w-8 p-0"
+                                title="Duplicate this item"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            )}
+                            
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeItem(index)}
+                              className="text-red-600 hover:bg-red-50 h-8 w-8 p-0"
+                              title="Remove this item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
+
+                        {/* Item Details - Show when editing or incomplete */}
+                        {(isEditing || !isComplete) && (
+                          <div className="space-y-4 border-t border-gray-200 pt-4">
+                            <Select
+                              label="Choose Item *"
+                              value={item.lineItemId}
+                              onChange={(e) => {
+                                updateItem(index, "lineItemId", e.target.value);
+                                if (e.target.value) {
+                                  // Show success toast when item is selected
+                                  const selectedItem = lineItems.find(li => li.id === e.target.value);
+                                  if (selectedItem) {
+                                    showToast(`"${selectedItem.name}" has been added to your template!`, "success");
+                                  }
+                                  // Auto-close editing when item is selected
+                                  setEditingItemIndex(null);
+                                }
+                              }}
+                              options={[
+                                {
+                                  value: "",
+                                  label: "Select from your existing items",
+                                },
+                                ...lineItemOptions,
+                              ]}
+                              required
+                            />
+
+                            {/* Create New Line Item Button - Only show when no item is selected */}
+                            {!item.lineItemId && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCreateNewLineItem(index)}
+                                className="w-full border-dashed border-blue-300 text-blue-600 hover:bg-blue-50"
+                              >
+                                <PlusCircle className="h-4 w-4 mr-2" />
+                                Don't see your item? Create a new one
+                              </Button>
+                            )}
+
+                            {selectedLineItem && (
+                              <>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <Input
+                                    label="Quantity *"
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={item.quantity}
+                                    onChange={(e) =>
+                                      updateItem(
+                                        index,
+                                        "quantity",
+                                        parseFloat(e.target.value) || 1
+                                      )
+                                    }
+                                    required
+                                  />
+                                  
+                                  <div className="space-y-1">
+                                    <label className="text-sm font-medium text-gray-700">
+                                      Total Amount
+                                    </label>
+                                    <div className="text-lg font-bold text-green-600 bg-green-50 p-3 rounded-lg text-center">
+                                      ₹{itemTotal.toLocaleString("en-IN")}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                  </label>
+                                  <textarea
+                                    value={item.notes || ""}
+                                    onChange={(e) =>
+                                      updateItem(index, "notes", e.target.value)
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    rows={2}
+                                    placeholder="Add specific notes for this item..."
+                                  />
+                                </div>
+
+                                <div className="flex justify-end">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => setEditingItemIndex(null)}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Done
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Show summary when complete and not editing */}
+                        {isComplete && !isEditing && (
+                          <div className="text-sm text-gray-600 mt-2">
+                            <span>{item.quantity} {selectedLineItem.unit} × ₹{selectedLineItem.rate} = ₹{itemTotal.toLocaleString("en-IN")}</span>
+                            {item.notes && (
+                              <p className="text-xs text-blue-600 mt-1">📝 {item.notes}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
 
                   {formData.items.length === 0 && (
-                    <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-                      <Package className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                      <p className="font-medium">No items added yet</p>
-                      <p className="text-sm">
-                        Click "Add Item" to start building your template
+                    <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                      <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Start Building Your Template</h3>
+                      <p className="text-sm mb-4">
+                        Add your first item to begin creating the estimation template
                       </p>
+                      <Button
+                        type="button"
+                        onClick={addItem}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Item
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -382,24 +729,27 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
               <div className="flex-shrink-0 mb-4">
                 <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                   <Calculator className="h-5 w-5 mr-2 text-green-600" />
-                  Template Preview
+                  Template Summary
                 </h4>
 
                 {/* Summary Stats */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white rounded p-3 border">
-                    <p className="text-sm text-gray-600">Total Items</p>
+                    <p className="text-sm text-gray-600">Configured Items</p>
                     <p className="text-2xl font-bold text-blue-600">
                       {templateItemsData.length}
                     </p>
+                    <p className="text-xs text-gray-500">
+                      of {formData.items.length} total
+                    </p>
                   </div>
                   <div className="bg-white rounded p-3 border">
-                    <p className="text-sm text-gray-600">Estimated Total</p>
+                    <p className="text-sm text-gray-600">Total Amount</p>
                     <p className="text-2xl font-bold text-green-600">
-                      ₹
-                      {calculateTemplateTotal().toLocaleString("en-IN", {
-                        minimumFractionDigits: 0,
-                      })}
+                      ₹{(calculateTemplateTotal() / 100000).toFixed(1)}L
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ₹{calculateTemplateTotal().toLocaleString("en-IN")}
                     </p>
                   </div>
                 </div>
@@ -409,28 +759,29 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
               <div className="bg-white rounded-lg border border-gray-200 flex-1 min-h-0 flex flex-col">
                 {templateItemsData.length > 0 ? (
                   <div className="p-4 h-full flex flex-col">
+                    <h5 className="font-medium text-gray-900 mb-4">Configured Items</h5>
                     <div className="flex-1 min-h-0">
                       <DataTable
                         data={templateItemsData}
                         columns={columns}
                         loading={false}
-                        emptyMessage="Add items to see them here"
+                        emptyMessage="Configure items to see them here"
                         searchable={false}
                         sortable={true}
                         filterable={false}
-                        pagination={false} // Disable pagination to let it scroll
-                        pageSize={100} // Large page size
+                        pagination={false}
+                        pageSize={100}
                         className="h-full"
                       />
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center flex-1 text-gray-500">
-                    <div className="text-center">
-                      <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg font-medium">Template Preview</p>
+                    <div className="text-center p-8">
+                      <Calculator className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <h3 className="text-lg font-medium mb-2">Template Preview</h3>
                       <p className="text-sm">
-                        Add items to see the template preview
+                        Configure items on the left to see your template summary
                       </p>
                     </div>
                   </div>
@@ -441,27 +792,66 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
         </div>
 
         {/* Form Actions - Fixed at Bottom */}
-        <div className="flex justify-end space-x-3 border-t border-gray-200 mt-6 flex-shrink-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || formData.items.length === 0}
-          >
-            {isLoading
-              ? "Saving..."
-              : initialData
-              ? "Update Template"
-              : "Create Template"}
-          </Button>
+        <div className="flex justify-between items-center border-t border-gray-200 pt-6 mt-6 flex-shrink-0">
+          <div className="text-sm text-gray-600">
+            {templateItemsData.length > 0 && (
+              <span>
+                Total: <span className="font-bold text-green-600 text-lg">
+                  ₹{calculateTemplateTotal().toLocaleString("en-IN")}
+                </span> • {templateItemsData.length} items configured
+              </span>
+            )}
+          </div>
+          
+          <div className="flex space-x-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || formData.items.length === 0 || templateItemsData.length === 0}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isLoading ? (
+                <>
+                  <Save className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {initialData ? "Update Template" : "Create Template"}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </form>
+
+      {/* New Line Item Modal */}
+      <Modal
+        isOpen={showNewLineItemModal}
+        onClose={() => {
+          setShowNewLineItemModal(false);
+          setPendingItemIndex(null);
+        }}
+        title="Create New Line Item"
+        size="lg"
+      >
+        <InlineLineItemForm
+          onSubmit={handleNewLineItemSubmit}
+          onCancel={() => {
+            setShowNewLineItemModal(false);
+            setPendingItemIndex(null);
+          }}
+          isLoading={isCreatingLineItem}
+        />
+      </Modal>
     </div>
   );
 };

@@ -21,6 +21,7 @@ import {
   ProjectEstimation,
   ProjectEstimationItem,
   TimelineEvent,
+  EstimationTemplateFormData,
 } from "@/lib/types";
 import {
   ArrowLeft,
@@ -39,9 +40,11 @@ import {
   Check,
   AlertTriangle,
   Loader2,
+  Edit3,
 } from "lucide-react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import TemplateViewModal from "@/components/templates/TemplateViewModal";
+import EstimationTemplateForm from "@/components/forms/EstimationTemplateForm";
 
 const ActionLoadingOverlay: React.FC<{
   isVisible: boolean;
@@ -136,6 +139,62 @@ const InlineEditForm: React.FC<{
   </Modal>
 );
 
+// Dropdown Menu Component
+const DropdownMenu: React.FC<{
+  trigger: React.ReactNode;
+  items: Array<{
+    label: string;
+    icon?: React.ReactNode;
+    onClick: () => void;
+    className?: string;
+  }>;
+}> = ({ trigger, items }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(".dropdown-container")) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("click", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div className="relative dropdown-container">
+      <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+          {items.map((item, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                item.onClick();
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center transition-colors ${
+                index === 0 ? "rounded-t-lg" : ""
+              } ${index === items.length - 1 ? "rounded-b-lg" : ""} ${
+                item.className || ""
+              }`}
+            >
+              {item.icon && <span className="mr-2">{item.icon}</span>}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function ProjectDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -162,11 +221,12 @@ export default function ProjectDetailsPage() {
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [isSavingInline, setIsSavingInline] = useState(false);
-  const [showStatusConfirmation, setShowStatusConfirmation] = useState(false);
-  const [pendingStatusChange, setPendingStatusChange] = useState<{
-    oldStatus: Project["status"];
-    newStatus: Project["status"];
-  } | null>(null);
+
+  // Estimation editing states
+  const [editingEstimationTemplate, setEditingEstimationTemplate] =
+    useState<ProjectEstimation | null>(null);
+  const [isEditingEstimationTemplate, setIsEditingEstimationTemplate] =
+    useState(false);
 
   const [deletingEstimation, setDeletingEstimation] =
     useState<ProjectEstimation | null>(null);
@@ -195,10 +255,8 @@ export default function ProjectDetailsPage() {
     estimatedBudget: 0,
     projectAddress: "",
     agreementDate: "",
+    status: "New" as Project["status"], // Added status to project form
   });
-
-  const [statusFormData, setStatusFormData] =
-    useState<Project["status"]>("New");
 
   const projectId = params.id as string;
 
@@ -251,9 +309,8 @@ export default function ProjectDetailsPage() {
           estimatedBudget: projectData.estimatedBudget,
           projectAddress: projectData.projectAddress || "",
           agreementDate: projectData.agreementDate,
+          status: projectData.status, // Include status in form data
         });
-
-        setStatusFormData(projectData.status);
 
         // Fetch project estimations
         const estimations = await dataManager.getProjectEstimations(projectId);
@@ -385,6 +442,7 @@ export default function ProjectDetailsPage() {
         // Update local state immediately
         setProject((prev) => (prev ? { ...prev, ...clientFormData } : null));
         setIsEditingClient(false);
+        showToast("Client information updated successfully", "success");
 
         await addTimelineEvent({
           title: "Client Information Updated",
@@ -401,7 +459,7 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  // Handle project details save
+  // Handle project details save (now includes status)
   const handleSaveProjectDetails = async () => {
     if (!project) return;
 
@@ -439,64 +497,6 @@ export default function ProjectDetailsPage() {
     } finally {
       setIsSavingInline(false);
       hideActionLoading();
-    }
-  };
-
-  // Handle status change with confirmation
-  const handleStatusChange = (newStatus: Project["status"]) => {
-    if (!project || newStatus === project.status) return;
-
-    // Update dropdown immediately for better UX
-    setStatusFormData(newStatus);
-
-    // Show confirmation for the actual save
-    setPendingStatusChange({
-      oldStatus: project.status,
-      newStatus: newStatus,
-    });
-    setShowStatusConfirmation(true);
-  };
-
-  const confirmStatusChange = async () => {
-    if (!project || !pendingStatusChange) return;
-
-    setIsSavingInline(true);
-    showActionLoading("Updating project status...");
-
-    try {
-      const updatedProject = await dataManager.updateProject(project.id, {
-        status: pendingStatusChange.newStatus,
-      });
-
-      if (updatedProject) {
-        // Update local state immediately
-        setProject((prev) =>
-          prev ? { ...prev, status: pendingStatusChange.newStatus } : null
-        );
-        showToast(
-          `Project status changed to ${pendingStatusChange.newStatus}`,
-          "success"
-        );
-
-        // Add timeline event for status change
-        await addTimelineEvent({
-          title: `Status Changed: ${pendingStatusChange.oldStatus} → ${pendingStatusChange.newStatus}`,
-          description: `Project status updated from ${pendingStatusChange.oldStatus} to ${pendingStatusChange.newStatus}`,
-          date: new Date().toISOString(),
-          status: "completed",
-        });
-      }
-    } catch (error) {
-      showToast("Failed to update project status", "error");
-      // Revert dropdown to original status on error
-      setStatusFormData(project.status);
-      // Revert local project state too
-      setProject((prev) => (prev ? { ...prev, status: project.status } : null));
-    } finally {
-      setIsSavingInline(false);
-      hideActionLoading();
-      setShowStatusConfirmation(false);
-      setPendingStatusChange(null);
     }
   };
 
@@ -673,7 +673,80 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  // Enhanced Overview Tab with inline editing
+  // Convert ProjectEstimation to EstimationTemplateFormData for editing
+  const convertEstimationToTemplateFormData = (
+    estimation: ProjectEstimation
+  ): EstimationTemplateFormData => {
+    return {
+      name: estimation.name,
+      category: "Project Estimation",
+      items: estimation.items.map((item) => ({
+        id: item.id,
+        lineItemId: item.lineItemId,
+        quantity: item.quantity,
+        notes: item.notes || "",
+      })),
+    };
+  };
+
+  // Handle estimation template update
+  const handleUpdateEstimationTemplate = async (
+    formData: EstimationTemplateFormData
+  ) => {
+    if (!editingEstimationTemplate) return;
+
+    showActionLoading("Updating estimation...");
+
+    try {
+      // Update the estimation in the backend
+      const updatedEstimation = await dataManager.updateProjectEstimation(
+        editingEstimationTemplate.id,
+        {
+          name: formData.name,
+          items: formData.items.map((item) => {
+            const lineItem = lineItems.find((li) => li.id === item.lineItemId);
+            return {
+              id: item.id,
+              lineItemId: item.lineItemId,
+              quantity: item.quantity,
+              rate: lineItem?.rate || 0,
+              amount: (lineItem?.rate || 0) * item.quantity,
+              notes: item.notes,
+            };
+          }),
+        }
+      );
+
+      // Update local state
+      setProjectEstimations((prev) =>
+        prev.map((est) =>
+          est.id === updatedEstimation.id ? updatedEstimation : est
+        )
+      );
+
+      if (currentEstimation?.id === updatedEstimation.id) {
+        setCurrentEstimation(updatedEstimation);
+      }
+
+      setIsEditingEstimationTemplate(false);
+      setEditingEstimationTemplate(null);
+      showToast("Estimation updated successfully", "success");
+
+      // Add timeline event
+      await addTimelineEvent({
+        title: `Estimation Updated: ${updatedEstimation.name}`,
+        description: `Estimation has been modified with ${updatedEstimation.items.length} items`,
+        date: new Date().toISOString(),
+        status: "completed",
+      });
+    } catch (error) {
+      showToast("Failed to update estimation", "error");
+    } finally {
+      hideActionLoading();
+    }
+  };
+
+  // Enhanced Overview Tab with status display only
   const OverviewTab = () => {
     const getMostRecentEstimation = () => {
       if (!projectEstimations.length) return null;
@@ -741,7 +814,6 @@ export default function ProjectDetailsPage() {
                 <label className="text-sm font-medium text-gray-500">
                   Phone Number
                 </label>
-
                 <p className="text-gray-900">
                   {clientFormData?.phoneNumber
                     ? clientFormData.phoneNumber
@@ -753,7 +825,7 @@ export default function ProjectDetailsPage() {
 
           {/* Project Details with inline edit */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between h-[20%]">
               <div className="flex items-center">
                 <FileText className="h-5 w-5 text-gray-500 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -773,7 +845,7 @@ export default function ProjectDetailsPage() {
                 Edit
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="h-[80%] flex flex-col justify-around">
               <div className="flex justify-between">
                 <label className="text-sm font-medium text-gray-500">
                   Date Created
@@ -843,32 +915,16 @@ export default function ProjectDetailsPage() {
                 </Badge>
               </div>
 
-              {/* Status with inline edit */}
+              {/* Status - Display only (no dropdown) */}
               <div className="flex justify-between items-center">
                 <label className="text-sm font-medium text-gray-500">
                   Status
                 </label>
-                <div className="flex items-center space-x-2">
-                  <Badge
-                    variant={getStatusBadgeVariant(project?.status || "New")}
-                  >
-                    {statusFormData}
-                  </Badge>
-                  <select
-                    value={statusFormData}
-                    onChange={(e) =>
-                      handleStatusChange(e.target.value as Project["status"])
-                    }
-                    className="text-xs bg-transparent border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[140px]"
-                    disabled={isSavingInline}
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Badge
+                  variant={getStatusBadgeVariant(project?.status || "New")}
+                >
+                  {projectFormData?.status}
+                </Badge>
               </div>
             </div>
           </div>
@@ -1044,31 +1100,47 @@ export default function ProjectDetailsPage() {
                             Set Active
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setViewingEstimation(estimation)}
-                          className="text-xs"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
 
-                        {/* Delete Button - Only show if more than 1 estimation exists */}
-                        {projectEstimations.length > 1 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setDeletingEstimation(estimation);
-                              setShowDeleteConfirmation(true);
-                            }}
-                            className="text-xs text-red-600 hover:bg-red-50 border-red-200"
-                            title="Delete Estimation"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
+                        {/* Three-dot menu for actions */}
+                        <DropdownMenu
+                          trigger={
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs p-2"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          }
+                          items={[
+                            {
+                              label: "View Details",
+                              icon: <Eye className="h-4 w-4" />,
+                              onClick: () => setViewingEstimation(estimation),
+                            },
+                            {
+                              label: "Edit Estimation",
+                              icon: <Edit3 className="h-4 w-4" />,
+                              onClick: () => {
+                                setEditingEstimationTemplate(estimation);
+                                setIsEditingEstimationTemplate(true);
+                              },
+                            },
+                            ...(projectEstimations.length > 1
+                              ? [
+                                  {
+                                    label: "Delete",
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    onClick: () => {
+                                      setDeletingEstimation(estimation);
+                                      setShowDeleteConfirmation(true);
+                                    },
+                                    className: "text-red-600 hover:bg-red-50",
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1281,10 +1353,10 @@ export default function ProjectDetailsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center space-x-4 mb-4 sm:mb-0">
                 <Badge
-                  variant={getStatusBadgeVariant(project.status)}
+                  variant={getStatusBadgeVariant(projectFormData.status)}
                   className="text-sm px-3 py-1"
                 >
-                  {statusFormData}
+                  {projectFormData.status}
                 </Badge>
                 <span className="text-sm text-gray-500">
                   Last updated: {new Date().toLocaleDateString("en-GB")}
@@ -1380,7 +1452,7 @@ export default function ProjectDetailsPage() {
         </div>
       </InlineEditForm>
 
-      {/* Project Details Inline Edit Modal */}
+      {/* Project Details Inline Edit Modal - Now includes status */}
       <InlineEditForm
         isOpen={isEditingProject}
         onClose={() => setIsEditingProject(false)}
@@ -1413,9 +1485,47 @@ export default function ProjectDetailsPage() {
               }
               options={projectTypeOptions}
             />
+
+            <Select
+              label="Project Status *"
+              value={projectFormData.status}
+              onChange={(e) =>
+                setProjectFormData((prev) => ({
+                  ...prev,
+                  status: e.target.value as Project["status"],
+                }))
+              }
+              options={statusOptions}
+            />
           </div>
         </div>
       </InlineEditForm>
+
+      {/* Estimation Template Edit Modal */}
+      <Modal
+        isOpen={isEditingEstimationTemplate}
+        onClose={() => {
+          setIsEditingEstimationTemplate(false);
+          setEditingEstimationTemplate(null);
+        }}
+        title={`Edit Estimation: ${editingEstimationTemplate?.name}`}
+        size="full"
+        showFullscreenToggle={true}
+      >
+        {editingEstimationTemplate && (
+          <EstimationTemplateForm
+            onSubmit={handleUpdateEstimationTemplate}
+            onCancel={() => {
+              setIsEditingEstimationTemplate(false);
+              setEditingEstimationTemplate(null);
+            }}
+            initialData={convertEstimationToTemplateFormData(
+              editingEstimationTemplate
+            )}
+            isLoading={actionLoading.isVisible}
+          />
+        )}
+      </Modal>
 
       <ConfirmationModal
         isOpen={showDeleteConfirmation}
@@ -1446,28 +1556,6 @@ export default function ProjectDetailsPage() {
             : null
         }
         lineItems={lineItems}
-      />
-
-      {/* Status Change Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showStatusConfirmation}
-        onClose={() => {
-          setShowStatusConfirmation(false);
-          setPendingStatusChange(null);
-          // Revert dropdown to original status if cancelled
-          if (project) {
-            setStatusFormData(project.status);
-          }
-        }}
-        onConfirm={confirmStatusChange}
-        title="Confirm Status Change"
-        message={
-          pendingStatusChange
-            ? `Are you sure you want to change the project status from "${pendingStatusChange.oldStatus}" to "${pendingStatusChange.newStatus}"?`
-            : ""
-        }
-        confirmText="Change Status"
-        isLoading={isSavingInline}
       />
 
       {/* Template Selection Modal */}
