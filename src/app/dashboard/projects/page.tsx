@@ -5,9 +5,9 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
-import DataTable from "@/components/ui/DataTable";
+import DataTable, { TableColumn } from "@/components/ui/DataTable"; // Updated import to get TableColumn from DataTable
 import { useProjects } from "@/hooks/useProjects";
-import { Project, TableColumn, ProjectFormData } from "@/lib/types";
+import { Project, ProjectFormData } from "@/lib/types"; // Removed TableColumn from here
 import { Plus, Edit, Trash2, Calendar, MapPin, DollarSign } from "lucide-react";
 import ProjectForm from "@/components/forms/ProjectForm";
 
@@ -185,6 +185,8 @@ export default function ProjectsPage() {
             filterable
             pagination
             pageSize={10}
+            enableColumnFilters={true}
+            enableColumnVisibility={true}
           />
         </div>
       </div>

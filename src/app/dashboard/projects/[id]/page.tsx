@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
-import DataTable from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { dataManager } from "@/lib/data";
 import { useToast } from "@/hooks/useToast";
@@ -950,95 +949,6 @@ export default function ProjectDetailsPage() {
   };
 
   const EstimationsTab = () => {
-    const estimationItemColumns: TableColumn<ProjectEstimationItem>[] = [
-      {
-        id: "itemName",
-        header: "Item Details",
-        accessor: (item) => {
-          const lineItem = lineItems.find((li) => li.id === item.lineItemId);
-          return lineItem?.name || "Unknown Item";
-        },
-        sortable: true,
-        filterable: true,
-        render: (value, row) => {
-          const lineItem = lineItems.find((li) => li.id === row.lineItemId);
-          return (
-            <div>
-              <div className="font-medium text-gray-900">{value}</div>
-              <div className="text-sm text-gray-500">{lineItem?.category}</div>
-              <div className="text-xs text-gray-400">{lineItem?.unit}</div>
-            </div>
-          );
-        },
-      },
-      {
-        id: "quantity",
-        header: "Quantity",
-        accessor: "quantity",
-        sortable: true,
-        render: (value) => (
-          <div className="text-center">
-            <span className="font-medium">{value}</span>
-          </div>
-        ),
-      },
-      {
-        id: "rate",
-        header: "Rate (₹)",
-        accessor: "rate",
-        sortable: true,
-        render: (value) => (
-          <div className="text-right font-medium">
-            ₹{value.toLocaleString("en-IN")}
-          </div>
-        ),
-      },
-      {
-        id: "amount",
-        header: "Amount (₹)",
-        accessor: "amount",
-        sortable: true,
-        render: (value) => (
-          <div className="text-right font-semibold text-green-600">
-            ₹{value.toLocaleString("en-IN")}
-          </div>
-        ),
-      },
-      {
-        id: "notes",
-        header: "Notes",
-        accessor: "notes",
-        render: (value) => (
-          <div className="text-sm text-gray-600 max-w-xs truncate">
-            {value || "-"}
-          </div>
-        ),
-      },
-    ];
-
-    const renderEstimationItemActions = (item: ProjectEstimationItem) => (
-      <div className="flex items-center space-x-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setEditingEstimation(item)}
-          title="Edit Item"
-          className="hover:bg-blue-50 h-8 w-8"
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => deleteEstimationItem(item.id)}
-          title="Delete Item"
-          className="hover:bg-red-50 h-8 w-8"
-        >
-          <Trash2 className="h-4 w-4 text-red-600" />
-        </Button>
-      </div>
-    );
-
     return (
       <div className="p-6 space-y-4">
         {/* Estimation Version Control */}
@@ -1061,12 +971,6 @@ export default function ProjectDetailsPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 Create from Template
               </Button>
-              {currentEstimation && (
-                <Button size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Current
-                </Button>
-              )}
             </div>
           </div>
 
@@ -1170,10 +1074,8 @@ export default function ProjectDetailsPage() {
                   </div>
                 ))}
               </div>
-
             </div>
           )}
-
 
           {projectEstimations.length === 0 && (
             <div className="text-center py-12 bg-gray-50 rounded-lg">
