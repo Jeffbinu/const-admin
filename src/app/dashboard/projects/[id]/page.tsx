@@ -245,6 +245,7 @@ export default function ProjectDetailsPage() {
     clientName: "",
     clientAddress: "",
     phoneNumber: "",
+    email: "",
   });
 
   const [projectFormData, setProjectFormData] = useState({
@@ -299,6 +300,7 @@ export default function ProjectDetailsPage() {
           clientName: projectData.clientName,
           clientAddress: projectData.clientAddress,
           phoneNumber: projectData.phoneNumber || "",
+          email: projectData.email || "",
         });
 
         setProjectFormData({
@@ -818,6 +820,14 @@ export default function ProjectDetailsPage() {
                   {clientFormData?.phoneNumber
                     ? clientFormData.phoneNumber
                     : "-"}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Email Address
+                </label>
+                <p className="text-gray-900">
+                  {clientFormData?.email ? clientFormData.email : "-"}
                 </p>
               </div>
             </div>
@@ -1446,6 +1456,18 @@ export default function ProjectDetailsPage() {
               setClientFormData((prev) => ({
                 ...prev,
                 phoneNumber: e.target.value,
+              }))
+            }
+          />
+
+          <Input
+            label="Email Address"
+            type="email"
+            value={clientFormData.email}
+            onChange={(e) =>
+              setClientFormData((prev) => ({
+                ...prev,
+                email: e.target.value,
               }))
             }
           />

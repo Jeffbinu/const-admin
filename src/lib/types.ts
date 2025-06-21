@@ -116,7 +116,6 @@ export interface ProjectFormData {
 
 export interface LineItemFormData {
   name: string;
-  category: string;
   unit: string;
   rate: number;
   description?: string;

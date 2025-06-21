@@ -20,7 +20,6 @@ const LineItemForm: React.FC<LineItemFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<LineItemFormData>({
     name: initialData?.name || '',
-    category: initialData?.category || 'Building Materials', // Keep for backend compatibility
     unit: initialData?.unit || '',
     rate: initialData?.rate || 0,
     description: initialData?.description || '', // Keep for backend compatibility

@@ -14,19 +14,20 @@ import DataTable from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { useLineItems } from "@/hooks/useLineItems";
 import { useToast } from "@/hooks/useToast";
-import { 
-  Plus, 
-  Trash2, 
-  Package, 
-  Calculator, 
-  Edit, 
-  Info, 
+import {
+  Plus,
+  Trash2,
+  Package,
+  Calculator,
+  Edit,
+  Info,
   Copy,
   Save,
   PlusCircle,
   CheckCircle,
-  Edit3
+  Edit3,
 } from "lucide-react";
+import LineItemForm from "./LineItemForm";
 
 interface EstimationTemplateFormProps {
   onSubmit: (data: EstimationTemplateFormData) => Promise<void>;
@@ -45,153 +46,6 @@ interface TemplateItemDisplay {
   total: number;
   lineItemId: string;
 }
-
-// Inline Line Item Creation Form Component
-const InlineLineItemForm: React.FC<{
-  onSubmit: (data: LineItemFormData) => Promise<void>;
-  onCancel: () => void;
-  isLoading?: boolean;
-}> = ({ onSubmit, onCancel, isLoading = false }) => {
-  const [formData, setFormData] = useState<LineItemFormData>({
-    name: "",
-    unit: "",
-    rate: 0,
-    category: "Materials",
-    description: "",
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const categoryOptions = [
-    { value: "Materials", label: "Materials" },
-    { value: "Labor", label: "Labor" },
-    { value: "Equipment", label: "Equipment" },
-    { value: "Overhead", label: "Overhead" },
-    { value: "Other", label: "Other" },
-  ];
-
-  const unitOptions = [
-    { value: "sq ft", label: "Square Feet (sq ft)" },
-    { value: "sq m", label: "Square Meters (sq m)" },
-    { value: "cu ft", label: "Cubic Feet (cu ft)" },
-    { value: "cu m", label: "Cubic Meters (cu m)" },
-    { value: "linear ft", label: "Linear Feet (linear ft)" },
-    { value: "linear m", label: "Linear Meters (linear m)" },
-    { value: "pieces", label: "Pieces (pcs)" },
-    { value: "kg", label: "Kilograms (kg)" },
-    { value: "tons", label: "Tons" },
-    { value: "hours", label: "Hours" },
-    { value: "days", label: "Days" },
-    { value: "lump sum", label: "Lump Sum" },
-    { value: "bags", label: "Bags" },
-    { value: "boxes", label: "Boxes" },
-    { value: "rolls", label: "Rolls" },
-    { value: "sheets", label: "Sheets" },
-  ];
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.name.trim()) newErrors.name = "Item name is required";
-    if (!formData.unit.trim()) newErrors.unit = "Unit is required";
-    if (formData.rate <= 0) newErrors.rate = "Rate must be greater than 0";
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    
-    try {
-      await onSubmit(formData);
-    } catch (error) {
-      console.error("Failed to create line item:", error);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center mb-2">
-          <PlusCircle className="h-5 w-5 text-blue-600 mr-2" />
-          <h4 className="font-medium text-blue-900">Add New Item to Library</h4>
-        </div>
-        <p className="text-sm text-blue-700">
-          This will create a new line item that you can use in this template and future projects.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Item Name *"
-          value={formData.name}
-          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          error={errors.name}
-          placeholder="e.g., Cement Portland OPC 53 Grade"
-          required
-        />
-
-        <Select
-          label="Category *"
-          value={formData.category}
-          onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-          options={categoryOptions}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Select
-          label="Unit of Measurement *"
-          value={formData.unit}
-          onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-          options={[
-            { value: "", label: "Select a unit" },
-            ...unitOptions,
-          ]}
-          error={errors.unit}
-          required
-        />
-
-        <Input
-          label="Rate (₹) *"
-          type="number"
-          min="0"
-          step="0.01"
-          value={formData.rate}
-          onChange={(e) => setFormData(prev => ({ ...prev, rate: parseFloat(e.target.value) || 0 }))}
-          error={errors.rate}
-          placeholder="Enter rate per unit"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description (Optional)
-        </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          rows={3}
-          placeholder="Add specifications, quality standards, or other details"
-        />
-      </div>
-
-      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Creating..." : "Create Item"}
-        </Button>
-      </div>
-    </form>
-  );
-};
 
 const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
   onSubmit,
@@ -273,10 +127,14 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
       id: `item_${Date.now()}`,
       quantity: itemToDuplicate.quantity,
     };
-    
+
     setFormData((prev) => ({
       ...prev,
-      items: [...prev.items.slice(0, index + 1), duplicatedItem, ...prev.items.slice(index + 1)],
+      items: [
+        ...prev.items.slice(0, index + 1),
+        duplicatedItem,
+        ...prev.items.slice(index + 1),
+      ],
     }));
   };
 
@@ -289,34 +147,39 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
     setIsCreatingLineItem(true);
     try {
       await createLineItem(data);
-      
+
       // Close modal immediately after successful creation
       setShowNewLineItemModal(false);
-      
+
       // Show success toast
-      showToast(`"${data.name}" has been added to your line items library!`, "success");
-      
+      showToast(
+        `"${data.name}" has been added to your line items library!`,
+        "success"
+      );
+
       // Wait a moment for the lineItems to update, then auto-select the new item
       setTimeout(() => {
         if (pendingItemIndex !== null) {
           // Find the newly created item by matching the name and other properties
-          const newLineItem = lineItems.find(item => 
-            item.name === data.name && 
-            item.category === data.category && 
-            item.rate === data.rate && 
-            item.unit === data.unit
+          const newLineItem = lineItems.find(
+            (item) =>
+              item.name === data.name &&
+              item.rate === data.rate &&
+              item.unit === data.unit
           );
-          
+
           if (newLineItem) {
             updateItem(pendingItemIndex, "lineItemId", newLineItem.id);
-            showToast(`"${data.name}" has been selected for this template item!`, "success");
+            showToast(
+              `"${data.name}" has been selected for this template item!`,
+              "success"
+            );
             // Auto-close editing since item is now selected
             setEditingItemIndex(null);
           }
         }
         setPendingItemIndex(null);
       }, 500); // Wait 500ms for state to update
-      
     } catch (error) {
       console.error("Failed to create line item:", error);
       showToast("Failed to create line item. Please try again.", "error");
@@ -352,7 +215,10 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
       await onSubmit(formData);
       // Show success toast based on whether it's create or update
       const action = initialData ? "updated" : "created";
-      showToast(`Template "${formData.name}" has been ${action} successfully!`, "success");
+      showToast(
+        `Template "${formData.name}" has been ${action} successfully!`,
+        "success"
+      );
     } catch (error) {
       console.error("Form submission error:", error);
       const action = initialData ? "update" : "create";
@@ -410,7 +276,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
         <div>
           <span className="font-medium text-gray-900">{value}</span>
           <p className="text-xs text-gray-500">
-            {lineItems.find(item => item.id === row.lineItemId)?.category}
+            {lineItems.find((item) => item.id === row.lineItemId)?.category}
           </p>
         </div>
       ),
@@ -511,7 +377,9 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
               <div className="flex-1 overflow-y-auto pr-2 min-h-0">
                 <div className="space-y-3">
                   {formData.items.map((item, index) => {
-                    const selectedLineItem = getSelectedLineItem(item.lineItemId);
+                    const selectedLineItem = getSelectedLineItem(
+                      item.lineItemId
+                    );
                     const itemTotal = calculateItemTotal(item);
                     const isEditing = editingItemIndex === index;
                     const isComplete = !!selectedLineItem;
@@ -520,23 +388,33 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                       <div
                         key={item.id}
                         className={`border rounded-lg p-4 transition-all ${
-                          isComplete 
-                            ? 'bg-green-50 border-green-200' 
-                            : isEditing 
-                            ? 'bg-blue-50 border-blue-200' 
-                            : 'bg-white border-gray-200'
+                          isComplete
+                            ? "bg-green-50 border-green-200"
+                            : isEditing
+                            ? "bg-blue-50 border-blue-200"
+                            : "bg-white border-gray-200"
                         }`}
                       >
                         {/* Item Header */}
                         <div className="flex justify-between items-center mb-3">
                           <div className="flex items-center space-x-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                              isComplete ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'
-                            }`}>
-                              {isComplete ? <CheckCircle className="h-4 w-4" /> : index + 1}
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                isComplete
+                                  ? "bg-green-600 text-white"
+                                  : "bg-gray-300 text-gray-600"
+                              }`}
+                            >
+                              {isComplete ? (
+                                <CheckCircle className="h-4 w-4" />
+                              ) : (
+                                index + 1
+                              )}
                             </div>
                             <h5 className="font-medium text-gray-900">
-                              {selectedLineItem ? selectedLineItem.name : `Item #${index + 1}`}
+                              {selectedLineItem
+                                ? selectedLineItem.name
+                                : `Item #${index + 1}`}
                             </h5>
                             {isComplete && (
                               <Badge variant="secondary" className="text-xs">
@@ -544,7 +422,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                               </Badge>
                             )}
                           </div>
-                          
+
                           <div className="flex items-center space-x-1">
                             {!isEditing && (
                               <Button
@@ -558,7 +436,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                                 <Edit3 className="h-4 w-4" />
                               </Button>
                             )}
-                            
+
                             {selectedLineItem && (
                               <Button
                                 type="button"
@@ -571,7 +449,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                                 <Copy className="h-4 w-4" />
                               </Button>
                             )}
-                            
+
                             <Button
                               type="button"
                               variant="ghost"
@@ -595,9 +473,14 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                                 updateItem(index, "lineItemId", e.target.value);
                                 if (e.target.value) {
                                   // Show success toast when item is selected
-                                  const selectedItem = lineItems.find(li => li.id === e.target.value);
+                                  const selectedItem = lineItems.find(
+                                    (li) => li.id === e.target.value
+                                  );
                                   if (selectedItem) {
-                                    showToast(`"${selectedItem.name}" has been added to your template!`, "success");
+                                    showToast(
+                                      `"${selectedItem.name}" has been added to your template!`,
+                                      "success"
+                                    );
                                   }
                                   // Auto-close editing when item is selected
                                   setEditingItemIndex(null);
@@ -645,7 +528,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                                     }
                                     required
                                   />
-                                  
+
                                   <div className="space-y-1">
                                     <label className="text-sm font-medium text-gray-700">
                                       Total Amount
@@ -690,9 +573,15 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                         {/* Show summary when complete and not editing */}
                         {isComplete && !isEditing && (
                           <div className="text-sm text-gray-600 mt-2">
-                            <span>{item.quantity} {selectedLineItem.unit} × ₹{selectedLineItem.rate} = ₹{itemTotal.toLocaleString("en-IN")}</span>
+                            <span>
+                              {item.quantity} {selectedLineItem.unit} × ₹
+                              {selectedLineItem.rate} = ₹
+                              {itemTotal.toLocaleString("en-IN")}
+                            </span>
                             {item.notes && (
-                              <p className="text-xs text-blue-600 mt-1">📝 {item.notes}</p>
+                              <p className="text-xs text-blue-600 mt-1">
+                                📝 {item.notes}
+                              </p>
                             )}
                           </div>
                         )}
@@ -703,9 +592,12 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                   {formData.items.length === 0 && (
                     <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
                       <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Start Building Your Template</h3>
+                      <h3 className="text-lg font-medium mb-2">
+                        Start Building Your Template
+                      </h3>
                       <p className="text-sm mb-4">
-                        Add your first item to begin creating the estimation template
+                        Add your first item to begin creating the estimation
+                        template
                       </p>
                       <Button
                         type="button"
@@ -725,7 +617,6 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
           {/* Right Pane - Preview Table */}
           <div className="flex flex-col min-h-0">
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col h-full">
-
               {/* Items Table - Flexible Height */}
               <div className="bg-white rounded-lg border border-gray-200 flex-1 min-h-0 flex flex-col">
                 {templateItemsData.length > 0 ? (
@@ -749,7 +640,9 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
                   <div className="flex items-center justify-center flex-1 text-gray-500">
                     <div className="text-center p-8">
                       <Calculator className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium mb-2">Template Preview</h3>
+                      <h3 className="text-lg font-medium mb-2">
+                        Template Preview
+                      </h3>
                       <p className="text-sm">
                         Configure items on the left to see your template summary
                       </p>
@@ -766,13 +659,15 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
           <div className="text-sm text-gray-600">
             {templateItemsData.length > 0 && (
               <span>
-                Total: <span className="font-bold text-green-600 text-lg">
+                Total:{" "}
+                <span className="font-bold text-green-600 text-lg">
                   ₹{calculateTemplateTotal().toLocaleString("en-IN")}
-                </span> • {templateItemsData.length} items configured
+                </span>{" "}
+                • {templateItemsData.length} items configured
               </span>
             )}
           </div>
-          
+
           <div className="flex space-x-3">
             <Button
               type="button"
@@ -784,7 +679,11 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || formData.items.length === 0 || templateItemsData.length === 0}
+              disabled={
+                isLoading ||
+                formData.items.length === 0 ||
+                templateItemsData.length === 0
+              }
               className="bg-green-600 hover:bg-green-700"
             >
               {isLoading ? (
@@ -813,7 +712,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
         title="Create New Line Item"
         size="lg"
       >
-        <InlineLineItemForm
+        <LineItemForm
           onSubmit={handleNewLineItemSubmit}
           onCancel={() => {
             setShowNewLineItemModal(false);
