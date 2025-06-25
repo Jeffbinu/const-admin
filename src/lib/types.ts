@@ -41,7 +41,7 @@ export interface Project {
 export interface LineItem {
   id: string;
   name: string;
-  category: string;
+  category?: string;
   unit: string;
   rate: number;
   description?: string;
@@ -119,6 +119,7 @@ export interface LineItemFormData {
   unit: string;
   rate: number;
   description?: string;
+  category?: string; 
 }
 
 export interface EstimationTemplateFormData {
