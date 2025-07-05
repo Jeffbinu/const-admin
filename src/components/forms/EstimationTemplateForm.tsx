@@ -45,6 +45,7 @@ interface TemplateItemDisplay {
   quantity: number;
   total: number;
   lineItemId: string;
+  notes: any;
 }
 
 const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
@@ -262,6 +263,7 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
         quantity: item.quantity,
         total: calculateItemTotal(item),
         lineItemId: item.lineItemId,
+        notes: item.notes,
       };
     });
 
@@ -301,6 +303,17 @@ const EstimationTemplateForm: React.FC<EstimationTemplateFormProps> = ({
       render: (value: any) => (
         <span className="font-medium text-gray-900">
           ₹{value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      id: "notes",
+      header: "Note (₹)",
+      accessor: "notes" as keyof TemplateItemDisplay,
+      sortable: false,
+      render: (value: any) => (
+        <span className="font-medium text-gray-900">
+          {value}
         </span>
       ),
     },

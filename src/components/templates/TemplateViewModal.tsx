@@ -140,8 +140,8 @@ const TemplateViewModal: React.FC<TemplateViewModalProps> = ({
             {/* Table Header */}
             <div className="border-2 border-b-none">
               <div className="bg-white text-center py-2 flex items-center justify-center">
-                <h2 className="text-xl font-boldflex items-center justify-center">
-                  {template.name}
+                <h2 className=" text-xl font-bold items-center justify-center">
+                  ESTIMATION
                 </h2>
               </div>
               <div className="grid grid-cols-2 border-t-2 border-black">
@@ -153,7 +153,7 @@ const TemplateViewModal: React.FC<TemplateViewModalProps> = ({
                 </div>
               </div>
               <div className=" text-center py-2 border-t-2  border-black">
-                <h3 className="text-lg font-bold italic">ESTIMATED COST</h3>
+                <h3 className="text-lg font-bold">ESTIMATED COST</h3>
               </div>
             </div>
 
